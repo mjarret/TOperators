@@ -35,13 +35,9 @@ class Z2:
 		return '[%g, %g, %g]' % (self.a, self.b, self.c)
 		
 def scale(a,b,c,k):			
-	while c < k: 			# Doing things as a loop works faster than computing how many times to do it
-		b = a
-		a = 2*b
-		c += 1
+	while c < k: a,b,c = 2*b,a,c+1 		# Doing things as a loop works faster than computing how many times to do it
 	return(a,b,c)
 	
 def reduce(a,b,c):
-	while a % 2 == 0 and c > 0: 
-		a,b,c = b,a/2,c-1
+	while a % 2 == 0 and c > 0: a,b,c = b,a/2,c-1
 	return(a,b,c)
