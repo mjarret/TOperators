@@ -2,9 +2,7 @@ class Z2:
 
 	# Store everything as a 3-tuple (a,b,c) = (sign(a) sqrt{2}^{|a|} + sign(b) \sqrt{2}^{|b|})/\sqrt{2}^c where a is even, b is odd, c is an integer
 	def __init__(self, intPart, rootPart, denom):
-		self.a = intPart
-		self.b = rootPart
-		self.c = denom
+		self.a, self.b, self.c = reduce(intPart, rootPart, denom)
 		
 	def __add__(self, other):
 		a,b,c = scale(self.a,self.b,self.c,other.c)				# Scaling both terms is the same runtime as scaling a single term
