@@ -1,0 +1,3 @@
+class cliff:
+
+	def __init__(
