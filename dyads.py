@@ -31,8 +31,6 @@ class Z2:
 	def __eq__(self, other):
 		if isinstance(other, Z2):
 			return (self.a == other.a and self.b == other.b and self.c == other.c)
-		else if isinstance(other, list):
-			return (self.a == list[0] and self.b == list[1] and self.c == list[2])
 		return False
 	
 	def __str__(self):
