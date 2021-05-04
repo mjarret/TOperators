@@ -1,7 +1,11 @@
 
 import dyads
+<<<<<<< HEAD
 # import dyads2
 import time
+=======
+# import time
+>>>>>>> 5f43dadee57f3324812187a69affab13d024c502
 import random
 from random import shuffle
 
@@ -69,6 +73,7 @@ def print_Mat(A):
 #			Main			#
 #############################	
 def main():
+<<<<<<< HEAD
 	a = dyads.Z2(1,2,3)
 	b = dyads.Z2(2,2,1)
 	start = time.time()
@@ -77,6 +82,14 @@ def main():
 	print(t*1000)
 	
 
+=======
+	A = rand_Perm()
+	print_Mat(A)
+	B = rand_Perm()
+	print(areEquivalent(A,B))
+	print_Mat(matrix_multiply(A,B))
+	
+>>>>>>> 5f43dadee57f3324812187a69affab13d024c502
 if __name__ == "__main__":
 	main()	
 	
