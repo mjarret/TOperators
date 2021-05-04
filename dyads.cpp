@@ -42,9 +42,9 @@ class Z2 {
             ret[2] = denom_exp;
             while(ret[2] < k) {
                 int tmp = ret[0];
-                ret[0] = 2*ret[1];
+                ret[0] = ret[1]<<1;
                 ret[1] = tmp;
-                ret[2] = ret[2]+1;
+                ret[2]++;
             }
             return ret;
         }
@@ -61,7 +61,7 @@ class Z2 {
 
 };
 
-int * scale(int (&a)[3],int k) {
+int * scale(int (&a)[3], int k) {
         int * ret = new int[3];
         int tmp;
         ret = a;
@@ -89,8 +89,9 @@ int * add(int (&a)[3], int (&b)[3]) {
 
 int main() {
     Z2 tmp;
-    Z2 tmp2 = Z2(1,2,3);
-    Z2 tmp4 = Z2(2,2,1);
+    Z2 tmp2 = Z2(14098400,42341098,8321);
+    Z2 tmp4 = Z2(39481920,49276910,8340);
+    long int s = 9999999999;
     auto start = chrono::steady_clock::now();
     for(int i = 0; i < 10000; i ++) {
         tmp2 + tmp4;
@@ -99,20 +100,11 @@ int main() {
     cout << "Elapsed time in milliseconds: "
         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
         << " ms" << endl; 
-    auto start0 = chrono::steady_clock::now();
-    int t2 [3] = {1,2,3};
-    int t4 [3] = {2,2,1};
-    for(int i = 0; i < 10000; i ++) {
-        add(t2,t4);
-    }
-    auto end0 = chrono::steady_clock::now();
-    cout << "Elapsed time in milliseconds: "
-        << chrono::duration_cast<chrono::milliseconds>(end0 - start0).count()
-        << " ms" << endl; 
-    int arr [3] = {1,2,3};
-    int arr2 [3] = {4,5,6};
-    add(arr,arr2);
-    scale(arr, 3);
-    cout << scale(arr,10)[2] << endl;
+
+    long long i = (1e20+1);
+    cout << i << endl;
+
+    cout << sizeof(i) << endl;
+    cout << sizeof(s) << endl;
     return 0;
 };
