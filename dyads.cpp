@@ -12,7 +12,10 @@ class Z2 {
         int natural;
         int root_coeff;
         int denom_exp;
-        int ret[3];             // Allocated space for routine operations, seems to help.
+        int ret[3];             // Allocated space for routine operations, 
+                                // seems to help. May want to allocate the
+                                // scratch space elsewhere so that each 
+                                // object doesn't hold its own.
 
         Z2() {
             natural = 0;
@@ -112,16 +115,23 @@ class SO6 {
 
         bool operator==(SO6 &other) {
             SO6 to_return;
-            Z2 next;
             int tot;
+            bool flag;
+            Z2 dot_product;
+            Z2 next;
             for(int i = 0; i < 6; i++) {
                 tot = 0;
                 for(int j = 0; j < 6; j++) {
+                    dot_product = Z2(0,0,0);
                     for(int k = 0; k <6; k++) {
                         next = arr[i][k]*(other.arr)[i][k];
-                        arr[i][j] += next;
+                        dot_product += next;
                     }
+                    if(dot_product.root_coeff != 0 || dot_product.denom_exp != 0) {return false;}
+                    tot += (dot_product.natural)*(dot_product.natural);
+                    if(tot > 1) {return false;}
                 }
+                if(tot !=1) {return false;}
             }
             return true;
         }
