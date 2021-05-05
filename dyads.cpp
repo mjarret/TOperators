@@ -1,15 +1,18 @@
 #include<iostream>
 #include<chrono>
 #include<unistd.h>
+#include<stdio.h>
+#include<stdlib.h>
 
 using namespace std;
 
 class Z2 {
-
+// Store a value of (a + b√2)/2^k
     public:
         int natural;
         int root_coeff;
         int denom_exp;
+        int ret[3];             // Allocated space for routine operations, seems to help.
 
         Z2() {
             natural = 0;
@@ -21,90 +24,135 @@ class Z2 {
             natural = a;
             root_coeff = b;
             denom_exp = c;
+            reduce();
         }
 
-        Z2  operator+(const Z2& other){
-            Z2 tmp = other;
-            int* arr0 = new int[3];
-            int* arr1 = new int[3];
-            int k = max(other.denom_exp,denom_exp);
-            arr0 = scale(k);
-            arr1 = tmp.scale(k);
-            Z2 ret = Z2(arr0[0]+arr1[0],arr0[1]+arr1[1],k);
-            ret.reduce();
-            return ret;
+        //  Input: Z2 other
+        //  Output: this + other
+        Z2  operator+(Z2 &other) {
+            int k = max(denom_exp,other.denom_exp);
+            int* arr0 = scale(k);
+            int* arr1 = other.scale(k);  
+            return Z2(arr0[0]+arr1[0],arr0[1]+arr1[1],k);
         }
 
-        int * scale(int k){
-            int *ret = new int[3];
-            ret[0] = natural;
-            ret[1] = root_coeff;
-            ret[2] = denom_exp;
-            while(ret[2] < k) {
-                int tmp = ret[0];
-                ret[0] = ret[1]<<1;
-                ret[1] = tmp;
-                ret[2]++;
-            }
-            return ret;
+        Z2 & operator+=(Z2 &other) {
+            int k = max(denom_exp,other.denom_exp);
+            int* arr0 = scale(k);
+            int* arr1 = other.scale(k);  
+            natural = arr0[0] + arr1[0];
+            root_coeff = arr0[1] +arr1[1];
+            denom_exp = k;
+            return *this;
+        }
+
+
+        //  Input: Z2 other
+        //  Output: this - other
+        Z2 operator-(Z2 & other) {
+            int k = max(denom_exp,other.denom_exp);
+            int* arr0 = scale(k);
+            int* arr1 = other.scale(k);
+            return Z2(arr0[0]-arr1[0],arr0[1]-arr1[1],k);            
+        }
+
+        // Input: a Z2 other
+        // Output: this == other
+        bool operator==(const Z2 &other) {
+            return (natural == other.natural && root_coeff == other.root_coeff && denom_exp == other.denom_exp);
+        }
+
+        Z2 operator* (const Z2 &other) {
+            Z2 to_return;
+            to_return.natural = natural*other.natural + 2*(root_coeff*other.root_coeff);
+            to_return.root_coeff = natural*other.root_coeff + root_coeff*other.natural;
+            to_return.denom_exp = denom_exp + other.denom_exp;
+            to_return.reduce();
+            return to_return;
+        }
+
+        int * scale(const int & k) {
+            int divresult = k-denom_exp;             // floor(difference/2) , remainder
+            ret[0] = natural << divresult;                 // natural -> natural / 2^quotient
+            ret[1] = root_coeff << divresult;              // root_coeff -> root_coeff / 2^quotient
+            ret[2] = k;        
+            return ret;                                         
         }
 
         void reduce(){
-            while(natural % 2 == 0 && denom_exp > 0) {
-                int tmp = natural;
-                natural = root_coeff;
-                root_coeff = tmp>>1;
-                denom_exp = denom_exp-1;
+            while(natural % 2 == 0 && root_coeff % 2 == 0 && denom_exp > 0) {
+                natural = natural >> 1;
+                root_coeff = root_coeff >> 1;
+                denom_exp--;
             }
             return;
         }
-
 };
 
-int * scale(int (&a)[3], int k) {
-        int * ret = new int[3];
-        int tmp;
-        ret = a;
-        while(ret[2] < k) {
-            tmp = ret[0];
-            ret[0] = ret[1]<<1;
-            ret[1] = tmp;
-            ret[2] = ret[2]+1;
+class SO6 {
+    private:
+        Z2 arr[6][6];
+
+    public: 
+        SO6() {}
+
+        SO6 operator* (SO6 &other) {
+            SO6 to_return;
+            Z2 next;
+            for(int i = 0; i < 6; i++) {
+                for(int j = 0; j < 6; j++) {
+                    for(int k = 0; k <6; k++) {
+                        next = arr[i][k]*(other.arr)[k][j];
+                        arr[i][j] += next;
+                    }
+                }
+            }
+            return to_return;
         }
-        return ret;
-};
 
-int * add(int (&a)[3], int (&b)[3]) {
-        int k = max(a[2],b[2]);
-        int * v0 = new int[3];
-        int * v1 = new int[3];
-        v0 = scale(a,k);
-        v1 = scale(b, k);
-        int * ret = new int[3];
-        ret[0] = v0[0]+v1[0];
-        ret[1] = v0[1] + v1[1]; 
-        ret[2] = k;
-        return ret;
+        bool operator==(SO6 &other) {
+            SO6 to_return;
+            Z2 next;
+            int tot;
+            for(int i = 0; i < 6; i++) {
+                tot = 0;
+                for(int j = 0; j < 6; j++) {
+                    for(int k = 0; k <6; k++) {
+                        next = arr[i][k]*(other.arr)[i][k];
+                        arr[i][j] += next;
+                    }
+                }
+            }
+            return true;
+        }
+    
+        Z2 get_element(int i, int j) {
+            return arr[i][j];
+        }
+
+        void set_element(int i, int j, Z2 z2) {
+            arr[i][j] = z2;
+        }
 };
 
 int main() {
     Z2 tmp;
-    Z2 tmp2 = Z2(14098400,42341098,8321);
-    Z2 tmp4 = Z2(39481920,49276910,8340);
-    long int s = 9999999999;
+    Z2 tmp2 = Z2(81023490,708386,104);
+    Z2 tmp4 = Z2(16234968,223934,239);
     auto start = chrono::steady_clock::now();
-    for(int i = 0; i < 10000; i ++) {
-        tmp2 + tmp4;
+    for(int i = 0; i < (1e6); i ++) {
+        tmp2+tmp4;
+        tmp2*tmp4;
     }
     auto end = chrono::steady_clock::now();
-    cout << "Elapsed time in milliseconds: "
+    cout << "Elapsed time in microseconds: "
         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
         << " ms" << endl; 
-
-    long long i = (1e20+1);
-    cout << i << endl;
-
-    cout << sizeof(i) << endl;
-    cout << sizeof(s) << endl;
+    cout << tmp4.natural << "," << tmp4.root_coeff << "," << tmp4.denom_exp << endl;
+    cout << tmp.natural << "," << tmp.root_coeff << "," << tmp.denom_exp << endl;
+    printf("\u221A\n");
+    SO6 A;
+    SO6 B;
+    A*B;
     return 0;
 };

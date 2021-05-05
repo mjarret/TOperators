@@ -69,12 +69,14 @@ def print_Mat(A):
 #			Main			#
 #############################	
 def main():
-	a = dyads.Z2(14098400,42341098,8321)
-	b = dyads.Z2(39481920,49276910,8340)
+	a = dyads.Z2(81023490,708386,104)
+	b = dyads.Z2(16234968,223934,239)
 	start = time.time()
-	for i in range(10000):	a+b
+	for i in range(10**6):	
+		a+b
+		a*b
 	t= time.time()-start
-	print(t*1000)
+	print(t)
 	
 
 if __name__ == "__main__":
