@@ -11,7 +11,6 @@ using namespace std;
 
 // Class to handle numbers (A+Bsqrt(2))/2^K
 class Z2 {
-// Store a value of (A + B√2)/2^K
     public:
         int A,B,K;
         int ret[3];             // Allocated space for routine operations, 
@@ -125,7 +124,6 @@ ostream& operator<<(ostream& os, const Z2& z2) {
     return os;
 };
 
-
 // Class to handle matrices naturally. Should maybe do getters and setters.
 class SO6 {
     public:
@@ -154,23 +152,24 @@ class SO6 {
         }
 
         bool operator==(SO6 &other) {
-            int tot;
+            // int tot;
             bool flag;
             Z2 dot_product;
             Z2 next;
             for(int i = 0; i < 6; i++) {
-                tot = 0;
+                // tot = 0;
                 for(int j = 0; j < 6; j++) {
                     dot_product = Z2(0,0,0);
                     for(int k = 0; k <6; k++) {
                         next = arr[i][k]*(other.arr)[j][k];
                         dot_product += next;
                     }
-                    if(dot_product.B != 0 || dot_product.K != 0) {return false;}
-                    tot += (dot_product.A)*(dot_product.A);
-                    if(tot > 1) {return false;}
+                    // if(dot_product.B != 0 || dot_product.K != 0) return false;
+                    if(dot_product.K != 0) return false;
+                    // tot += (dot_product.A)*(dot_product.A);
+                    // if(tot > 1) return false;
                 }
-                if(tot !=1) {return false;}
+                // if(tot !=1) return false;
             }
             return true;
         }
@@ -242,5 +241,6 @@ int main() {
     cout << "Elapsed wall time in milliseconds for " << num_tests << " 'false' matrix similarity checks: "
         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
         << " ms" << endl;     
+    
     return (0);
 };
