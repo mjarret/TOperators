@@ -9,7 +9,7 @@
 
 using namespace std;
 
-// Class to handle numbers (A+Bsqrt(2))/2^K
+// Class to handle numbers (A+B√2)/2^K
 class Z2 {
     public:
         int A,B,K;
@@ -242,6 +242,6 @@ int main() {
     cout << "Elapsed wall time in milliseconds for " << num_tests << " 'false' matrix similarity checks: "
         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
         << " ms" << endl;     
-    
+    cout << tmp2 << endl;
     return (0);
 };
