@@ -37,7 +37,7 @@ class Z2 {
             int k = max(this->K,other.K);
             int* arr0 = scale(k);
             int* arr1 = other.scale(k);  
-            return Z2(arr0[0]+arr1[0],arr0[1]+arr1[1],k).reduce();        
+            return Z2(arr0[0]+arr1[0],arr0[1]+arr1[1],k);        
         }
 
         Z2 & operator+=(Z2 &other) {
@@ -47,7 +47,6 @@ class Z2 {
             this->A = arr0[0] + arr1[0];
             this->B = arr0[1] +arr1[1];
             this->K = k;
-            reduce();
             return *this;
         }
 
@@ -58,7 +57,7 @@ class Z2 {
             int k = max(K,other.K);
             int* arr0 = scale(k);
             int* arr1 = tmp.scale(k);
-            return Z2(arr0[0]-arr1[0],arr0[1]-arr1[1],k).reduce();            
+            return Z2(arr0[0]-arr1[0],arr0[1]-arr1[1],k);          
         }
 
         // Input: a Z2 other
@@ -80,7 +79,7 @@ class Z2 {
             to_return.A = A*other.A + 2*(B*other.B);
             to_return.B = A*other.B + B*other.A;
             to_return.K = K + other.K;
-            return to_return.reduce();
+            return to_return;
         }
 
         int * scale(const int & k) {
@@ -167,6 +166,7 @@ class SO6 {
                         dot_product += next;
                     }
                     // if(dot_product.B != 0 || dot_product.K != 0) return false;
+                    dot_product.reduce();
                     if(dot_product.K != 0) return false;
                     // tot += (dot_product.A)*(dot_product.A);
                     // if(tot > 1) return false;
