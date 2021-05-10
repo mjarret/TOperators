@@ -32,6 +32,8 @@ class Z2 {
         //  Output: this + other
         //  Best practice is to pass other as a constant so it can't be modified, but it's a bit less efficient and we can, at least in principle, be careful. The issue is scale(k). This could be made independent and also, mayyyyyybe, more efficient by defining a scale method that just rescales arbitrary values A,B,K. It seems like having the A,B,K close to the array ret stored in memory makes it more efficient, though, so it might be tricky to preserve efficiency and implement this function outside of the class unless we made scale a function of two array references which are near one another in memory or, alternatively, a single array of 6 values.
         //  Another good approach might be to reset the values of ret after each use to whatever the values of A,B,K happen to be? I think we want to keep ret and A,B,K close to one another in memory. It may be worth just having a single array?
+        //  One problem that we're having here is that we can't do other.scale with const. Maybe want to implement a standalone scale to avoid this? 
+        //  The problem is that scale changes the array ret. If we do away with that, we might lose some speed though.
         Z2  operator+(Z2 &other) {
             int k = max(this->K,other.K);
             int* arr0 = scale(k);
