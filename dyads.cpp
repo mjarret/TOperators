@@ -121,10 +121,10 @@ class Z2 {
 ostream& operator<<(ostream& os, const Z2& z2) {
     os << '(' << z2.A << '+' << z2.B << "\u221A2)/2^" << z2.K;
     return os;
-}
+};
 
 
-// Class to handle matrices naturally. Should implement getters and setters possibly.
+// Class to handle matrices naturally. Should maybe do getters and setters.
 class SO6 {
     public:
         Z2 arr[6][6];
@@ -184,7 +184,7 @@ class SO6 {
  
 // Generate random signed permutation matrices for testing purposes
 SO6 rand_perm() {
-    std::vector<int> v = {0,1,2,3,4,5};
+    std::vector<int> v = { 0, 1, 2, 3, 4, 5 };
     std::random_shuffle(v.begin(), v.end());
     SO6 to_return;
     for(int i = 0; i < 6; i++) {
@@ -208,7 +208,16 @@ int main() {
         tmp2 + tmp4;
     }
     auto end = chrono::steady_clock::now();
-    cout << "Elapsed time in milliseconds for " << num_tests << " Z2 additions: "
+    cout << "Elapsed wall time in milliseconds for " << num_tests << " Z2 additions: "
+        << chrono::duration_cast<chrono::milliseconds>(end - start).count()
+        << " ms" << endl; 
+    start = chrono::steady_clock::now();
+    num_tests = (1e6);
+    for(int i = 0; i < num_tests; i ++) {
+        tmp2 + tmp4;
+    }
+    end = chrono::steady_clock::now();
+    cout << "Elapsed wall time in milliseconds for " << num_tests << " Z2 multiplications: "
         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
         << " ms" << endl; 
     SO6 A = rand_perm();
@@ -219,7 +228,7 @@ int main() {
         (A==B);
     }
     end = chrono::steady_clock::now();
-    cout << "Elapsed time in milliseconds for " << num_tests << " 'true' matrix similarity checks: "
+    cout << "Elapsed wall time in milliseconds for " << num_tests << " 'true' matrix similarity checks: "
         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
         << " ms" << endl; 
     B.arr[0][4] = Z2(10,2,3);
@@ -228,7 +237,7 @@ int main() {
         (A==B);
     }
     end = chrono::steady_clock::now();
-    cout << "Elapsed time in milliseconds for " << num_tests << " 'false' matrix similarity checks: "
+    cout << "Elapsed wall time in milliseconds for " << num_tests << " 'false' matrix similarity checks: "
         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
         << " ms" << endl;     
     return (0);
