@@ -3,13 +3,13 @@
 #include<unistd.h>
 #include<stdio.h>
 #include<stdlib.h>
-#include<iterator>
 #include<random>
 #include<vector>
 #include<algorithm>
 
 using namespace std;
 
+// Class to handle numbers (A+Bsqrt(2))/2^K
 class Z2 {
 // Store a value of (A + B√2)/2^K
     public:
@@ -117,11 +117,14 @@ class Z2 {
         }
 };
 
+// Print a Z2 as (A+Bsqrt(2))/2^K
 ostream& operator<<(ostream& os, const Z2& z2) {
     os << '(' << z2.A << '+' << z2.B << "\u221A2)/2^" << z2.K;
     return os;
 }
 
+
+// Class to handle matrices naturally. Should implement getters and setters possibly.
 class SO6 {
     public:
         Z2 arr[6][6];
@@ -178,32 +181,8 @@ class SO6 {
             arr[i][j] = z2;
         }
 };
-
-int getNum(vector<int>& v)
-{
  
-    // Size of the vector
-    int n = v.size();
- 
-    // Generate a random number
-    srand(time(NULL));
- 
-    // Make sure the number is within
-    // the index range
-    int index = rand() % n;
- 
-    // Get random number from the vector
-    int num = v[index];
- 
-    // Remove the number from the vector
-    swap(v[index], v[n - 1]);
-    v.pop_back();
- 
-    // Return the removed number
-    return num;
-};
- 
-
+// Generate random signed permutation matrices for testing purposes
 SO6 rand_perm() {
     std::vector<int> v = {0,1,2,3,4,5};
     std::random_shuffle(v.begin(), v.end());
@@ -219,33 +198,38 @@ SO6 rand_perm() {
     return to_return;
 };
 
-
-int & func(int &i) {
-    return i;
-}
-
-int func2(int &i) {
-    return i;
-}
-
 int main() {
     Z2 tmp;
     Z2 tmp2 = Z2(81023490,708386,104);
     Z2 tmp4 = Z2(16234968,223934,239);
     auto start = chrono::steady_clock::now();
-    for(int i = 0; i < (1e6); i ++) {
+    int num_tests = (1e6);
+    for(int i = 0; i < num_tests; i ++) {
         tmp2 + tmp4;
     }
     auto end = chrono::steady_clock::now();
-    cout << "Elapsed time in microseconds: "
+    cout << "Elapsed time in milliseconds for " << num_tests << " Z2 additions: "
         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
         << " ms" << endl; 
-    cout << tmp4.A << "," << tmp4.B << "," << tmp4.K << endl;
-    cout << tmp.A << "," << tmp.B << "," << tmp.K << endl;
-    printf("\u221A\n");
     SO6 A = rand_perm();
     SO6 B = rand_perm();
-    // B.arr[5][5] = Z2(10,-3,5);
-    cout << (A==B) << endl;
+    num_tests = 1e5;
+    start = chrono::steady_clock::now();
+    for(int i = 0; i < num_tests; i++) {
+        (A==B);
+    }
+    end = chrono::steady_clock::now();
+    cout << "Elapsed time in milliseconds for " << num_tests << " 'true' matrix similarity checks: "
+        << chrono::duration_cast<chrono::milliseconds>(end - start).count()
+        << " ms" << endl; 
+    B.arr[0][4] = Z2(10,2,3);
+    start = chrono::steady_clock::now();
+    for(int i = 0; i < num_tests; i++) {
+        (A==B);
+    }
+    end = chrono::steady_clock::now();
+    cout << "Elapsed time in milliseconds for " << num_tests << " 'false' matrix similarity checks: "
+        << chrono::duration_cast<chrono::milliseconds>(end - start).count()
+        << " ms" << endl;     
     return (0);
 };
