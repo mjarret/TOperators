@@ -177,8 +177,9 @@ class SO6 {
             return arr[i][j];
         }
 
-        void set_element(int i, int j, Z2 z2) {
+        SO6 * set_element(int i, int j, Z2& z2) {
             arr[i][j] = z2;
+            return this;
         }
 };
  
@@ -226,7 +227,7 @@ int main() {
     start = chrono::steady_clock::now();
     for(int i = 0; i < num_tests; i++) {
         (A==B);
-    }
+    }      
     end = chrono::steady_clock::now();
     cout << "Elapsed time in milliseconds for " << num_tests << " 'false' matrix similarity checks: "
         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
