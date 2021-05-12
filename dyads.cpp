@@ -9,9 +9,8 @@
 
 using namespace std;
 
-// Class to handle numbers (A+Bsqrt(2))/2^K
+// Class to handle numbers (A+B√2)/2^K
 class Z2 {
-// Store a value of (A + B√2)/2^K
     public:
         int A,B,K;
         int ret[3];             // Allocated space for routine operations, 
@@ -32,11 +31,13 @@ class Z2 {
         //  Output: this + other
         //  Best practice is to pass other as a constant so it can't be modified, but it's a bit less efficient and we can, at least in principle, be careful. The issue is scale(k). This could be made independent and also, mayyyyyybe, more efficient by defining a scale method that just rescales arbitrary values A,B,K. It seems like having the A,B,K close to the array ret stored in memory makes it more efficient, though, so it might be tricky to preserve efficiency and implement this function outside of the class unless we made scale a function of two array references which are near one another in memory or, alternatively, a single array of 6 values.
         //  Another good approach might be to reset the values of ret after each use to whatever the values of A,B,K happen to be? I think we want to keep ret and A,B,K close to one another in memory. It may be worth just having a single array?
+        //  One problem that we're having here is that we can't do other.scale with const. Maybe want to implement a standalone scale to avoid this? 
+        //  The problem is that scale changes the array ret. If we do away with that, we might lose some speed though.
         Z2  operator+(Z2 &other) {
             int k = max(this->K,other.K);
             int* arr0 = scale(k);
             int* arr1 = other.scale(k);  
-            return Z2(arr0[0]+arr1[0],arr0[1]+arr1[1],k);
+            return Z2(arr0[0]+arr1[0],arr0[1]+arr1[1],k).reduce();        
         }
 
         Z2 & operator+=(Z2 &other) {
@@ -46,6 +47,7 @@ class Z2 {
             this->A = arr0[0] + arr1[0];
             this->B = arr0[1] +arr1[1];
             this->K = k;
+            reduce();
             return *this;
         }
 
@@ -56,7 +58,7 @@ class Z2 {
             int k = max(K,other.K);
             int* arr0 = scale(k);
             int* arr1 = tmp.scale(k);
-            return Z2(arr0[0]-arr1[0],arr0[1]-arr1[1],k);            
+            return Z2(arr0[0]-arr1[0],arr0[1]-arr1[1],k).reduce();          
         }
 
         // Input: a Z2 other
@@ -77,7 +79,7 @@ class Z2 {
             to_return.A = A*other.A + 2*(B*other.B);
             to_return.B = A*other.B + B*other.A;
             to_return.K = K + other.K;
-            return to_return.reduce();
+            return to_return;
         }
 
         int * scale(const int & k) {
@@ -121,10 +123,9 @@ class Z2 {
 ostream& operator<<(ostream& os, const Z2& z2) {
     os << '(' << z2.A << '+' << z2.B << "\u221A2)/2^" << z2.K;
     return os;
-}
+};
 
-
-// Class to handle matrices naturally. Should implement getters and setters possibly.
+// Class to handle matrices naturally. Should maybe do getters and setters.
 class SO6 {
     public:
         Z2 arr[6][6];
@@ -152,23 +153,24 @@ class SO6 {
         }
 
         bool operator==(SO6 &other) {
-            int tot;
+            // int tot;
             bool flag;
             Z2 dot_product;
             Z2 next;
             for(int i = 0; i < 6; i++) {
-                tot = 0;
+                // tot = 0;
                 for(int j = 0; j < 6; j++) {
                     dot_product = Z2(0,0,0);
                     for(int k = 0; k <6; k++) {
                         next = arr[i][k]*(other.arr)[j][k];
                         dot_product += next;
                     }
-                    if(dot_product.B != 0 || dot_product.K != 0) {return false;}
-                    tot += (dot_product.A)*(dot_product.A);
-                    if(tot > 1) {return false;}
+                    // if(dot_product.B != 0 || dot_product.K != 0) return false;
+                    if(dot_product.K != 0) return false;
+                    // tot += (dot_product.A)*(dot_product.A);
+                    // if(tot > 1) return false;
                 }
-                if(tot !=1) {return false;}
+                // if(tot !=1) return false;
             }
             return true;
         }
@@ -185,7 +187,7 @@ class SO6 {
  
 // Generate random signed permutation matrices for testing purposes
 SO6 rand_perm() {
-    std::vector<int> v = {0,1,2,3,4,5};
+    std::vector<int> v = { 0, 1, 2, 3, 4, 5 };
     std::random_shuffle(v.begin(), v.end());
     SO6 to_return;
     for(int i = 0; i < 6; i++) {
@@ -209,7 +211,16 @@ int main() {
         tmp2 + tmp4;
     }
     auto end = chrono::steady_clock::now();
-    cout << "Elapsed time in milliseconds for " << num_tests << " Z2 additions: "
+    cout << "Elapsed wall time in milliseconds for " << num_tests << " Z2 additions: "
+        << chrono::duration_cast<chrono::milliseconds>(end - start).count()
+        << " ms" << endl; 
+    start = chrono::steady_clock::now();
+    num_tests = (1e6);
+    for(int i = 0; i < num_tests; i ++) {
+        tmp2 + tmp4;
+    }
+    end = chrono::steady_clock::now();
+    cout << "Elapsed wall time in milliseconds for " << num_tests << " Z2 multiplications: "
         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
         << " ms" << endl; 
     SO6 A = rand_perm();
@@ -220,7 +231,7 @@ int main() {
         (A==B);
     }
     end = chrono::steady_clock::now();
-    cout << "Elapsed time in milliseconds for " << num_tests << " 'true' matrix similarity checks: "
+    cout << "Elapsed wall time in milliseconds for " << num_tests << " 'true' matrix similarity checks: "
         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
         << " ms" << endl; 
     B.arr[0][4] = Z2(10,2,3);
@@ -229,8 +240,9 @@ int main() {
         (A==B);
     }      
     end = chrono::steady_clock::now();
-    cout << "Elapsed time in milliseconds for " << num_tests << " 'false' matrix similarity checks: "
+    cout << "Elapsed wall time in milliseconds for " << num_tests << " 'false' matrix similarity checks: "
         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
         << " ms" << endl;     
+    cout << tmp2 << endl;
     return (0);
 };
