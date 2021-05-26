@@ -111,8 +111,19 @@ bool SO6::isPerm(SO6 s) {
         for (int j = 0; j < 6; j++) {
             if (!perms[j]) {
                 //sign is true if and only if columns should have the same sign
-                bool sign = arr[0][i].abs() + s.arr[0][j].abs() == (arr[0][i] + s.arr[0][j]).abs();
-                int k = 0;
+                bool sign = true;
+                int k;
+                for (k = 0; k < 6; k++) {
+                    if((arr[k][i].abs() == s.arr[k][j].abs()) && !(arr[k][i] == Z2())) {
+                        //Find the first two nonzero values with equal magnitude to get sign
+                        bool sign = arr[k][i].abs() + s.arr[k][j].abs() == (arr[k][i] + s.arr[k][j]).abs();
+                        break;
+                    }
+                }
+                if (k == 6) {
+                    break;
+                }
+                k = 0;
                 while (k < 6) {
                     if (!((arr[k][i].abs() == s.arr[k][j].abs()) && ((arr[k][i] == s.arr[k][j]) != !sign))) {
                         break;
