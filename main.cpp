@@ -24,7 +24,7 @@
 using namespace std;
 
 //Generate up to this tCount
-const int tCount = 5;
+const int tCount = 4;
 
 //These make up a linked list of SO6 objects
 //It won't have many operations, it only needs to do a few things

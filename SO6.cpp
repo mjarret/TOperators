@@ -31,6 +31,14 @@ SO6::SO6(std::string n){
     genOneNorm();
 }
 
+bool lexLEQ(Z2* first, Z2* second) {
+    for(int i = 0; i < 6 ; i++) {
+        if(first[i].toFloat() < second[i].toFloat()) return true;
+        if(first[i].toFloat() > second[i].toFloat()) return false;
+    }
+    // At this point they are the same
+    return true;
+}
 
 /**
  * Constructor that initializes arbitrary matrix with arbitrary name
@@ -39,10 +47,25 @@ SO6::SO6(std::string n){
  */
 SO6::SO6(Z2 a[6][6], std::string n){
     name = n;
+    Z2 null = Z2(0,0,0);
     //initializes SO6's entries according to a
     for(int i = 0; i<6; i++){
-        for(int j = 0; j<6; j++)
-            arr[i][j] = a[i][j];
+        int sign = 0;
+        int j = 0;
+        while(sign == 0) {
+            if(a[i][j] == null) {
+                arr[i][j] = null;
+                j++;
+                continue;
+            }
+            if(a[i][j].toFloat() > 0) sign = 1;
+            else sign = -1;
+            j++;
+        }
+        while(j<6) {
+            if(sign == 1) arr[i][j] = a[i][j];
+            else arr[i][j]=-a[i][j];
+        }
     }
 }
 
@@ -77,19 +100,14 @@ bool SO6::operator==(SO6 &other) {
     Z2 dot_product;
     Z2 next;
     for(int i = 0; i < 6; i++) {
-        // tot = 0;
         for(int j = 0; j < 6; j++) {
             dot_product = Z2(0,0,0);
             for(int k = 0; k <6; k++) {
                 next = arr[i][k]*other(j,k);
                 dot_product += next;
             }
-            // if(dot_product.B != 0 || dot_product.K != 0) return false;
             if(dot_product[2] != 0) return false;
-            // tot += (dot_product.A)*(dot_product.A);
-            // if(tot > 1) return false;
         }
-        // if(tot !=1) return false;
     }
     return true;
 }
@@ -107,8 +125,7 @@ void SO6::genOneNorm()
 //Returns true if and only if s and o are +/- column permutations of each other
 bool SO6::isPerm(SO6 s) {
     bool perms[6] = { false, false, false, false, false, false };
-    int permCount = 0;
-    bool isMatch = false;
+    bool isMatch;
     for (int i = 0; i < 6; i++) {
         isMatch = false;                                        // Column i is presently unmatched
         for (int j = 0; j < 6; j++) {
@@ -116,7 +133,7 @@ bool SO6::isPerm(SO6 s) {
             
             // Check if they match with the same sign
             for(int k = 0; k < 6; k++) {
-               if(arr[k][i] != s.arr[k][j]) break;           // We need them to match for every element. Should overload !=   
+               if(arr[k][i] != s.arr[k][j]) break;              // We need them to match for every element.  
                if(k == 5) isMatch = true;                       // Only hit me if everything has matched
             }
             if(isMatch) {                                       // If we matched, we can move on at this point
@@ -124,7 +141,7 @@ bool SO6::isPerm(SO6 s) {
                 break;                                          // Move to next value of i
             }
 
-            // Check if they match with opposite sign, can be combined with above methods to read easier
+            // Check if they match with opposite sign, can be combined with above methods to read easier. This shouldn't hit with the way that things have currently been implemented in the Z2 constructor, but I'm worried about the T matrices or the matrices that result after matrix multiplication. Should also add a method for multiplying a Z2 by an int.
             for(int k = 0; k <6; k++) {
                 if(-arr[k][i] != s.arr[k][j]) break;
                 if(k == 5) isMatch = true;
@@ -135,9 +152,9 @@ bool SO6::isPerm(SO6 s) {
                 break;
             }
         }    
-        if(!isMatch) return false;  //We completed a loop with no match, so return false at this point
+        if(!isMatch) return false;                              //We completed a loop with no match, so return false at this point
     }
-    return true; // Everything was matched
+    return true;                                                // Everything was matched
 }
 
 /**
