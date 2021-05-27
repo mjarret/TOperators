@@ -5,6 +5,8 @@ public:
     SO6(std::string); //initializes zero matrix
     SO6(Z2[6][6], std::string); //initializes matrix according to a 6x6 array of Z2
     SO6 operator*(SO6&); //mutliplication
+    // int operator<(SO6&);
+    short lexComp(SO6&);
     inline Z2& operator()(int i, int j){return arr[i][j];} //returns the (i,j)th entry
     inline const Z2& operator()(int i, int j) const{return arr[i][j];} //returns the (i,j)th entry but for const
     bool operator==(SO6&); //checking equality up to signed permutation

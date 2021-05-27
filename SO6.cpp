@@ -31,13 +31,18 @@ SO6::SO6(std::string n){
     genOneNorm();
 }
 
-bool lexLEQ(Z2* first, Z2* second) {
+/**
+ * Method to compare two Z2 arrays of length 6 lexicographically
+ * @param first array of Z2 of length 6
+ * @param second array of Z2 of length 6
+ * @return -1 if first < second, 0 if equal, 1 if first > second
+ */
+int lexComp(Z2* first, Z2* second) {
     for(int i = 0; i < 6 ; i++) {
-        if(first[i].toFloat() < second[i].toFloat()) return true;
-        if(first[i].toFloat() > second[i].toFloat()) return false;
+        if(first[i].toFloat() < second[i].toFloat()) return -1;
+        if(first[i].toFloat() > second[i].toFloat()) return 1;
     }
-    // At this point they are the same
-    return true;
+    return 0;    // At this point they are the same
 }
 
 /**
@@ -65,6 +70,7 @@ SO6::SO6(Z2 a[6][6], std::string n){
         while(j<6) {
             if(sign == 1) arr[i][j] = a[i][j];
             else arr[i][j]=-a[i][j];
+            j++;
         }
     }
 }
@@ -89,6 +95,16 @@ SO6 SO6::operator*(SO6& other){
     prod.genOneNorm();
     return prod;
 }
+
+short SO6::lexComp(SO6 &other) {
+    for(int i = 0; i<6; i++) {
+        for(int j = 0; j < 6 ; j++) {
+            if(arr[j][i].toFloat() < other.arr[j][i].toFloat()) return -1;
+            if(arr[j][i].toFloat() > other.arr[j][i].toFloat()) return 1;
+        }
+    }
+    return 0;
+} 
 
 /** overloads == method to check equality up to signed column permutation
  *  @param other reference to SO6 to be checked against
