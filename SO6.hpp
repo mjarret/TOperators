@@ -7,6 +7,7 @@ public:
     SO6 operator*(SO6&); //mutliplication
     // int operator<(SO6&);
     short lexComp(SO6&);
+    SO6 sort(SO6&);
     inline Z2& operator()(int i, int j){return arr[i][j];} //returns the (i,j)th entry
     inline const Z2& operator()(int i, int j) const{return arr[i][j];} //returns the (i,j)th entry but for const
     bool operator==(SO6&); //checking equality up to signed permutation

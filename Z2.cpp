@@ -202,6 +202,6 @@ float Z2::toFloat()
  * @returns reference ostream with the Z2's display form appended
  */
 std::ostream& operator<<(std::ostream& os, const Z2& z){
-    os << '(' << z[0] << '+' << z[1] << "*sqrt(2))/2^" << z[2];
+    os << '(' << z[0] << '+' << z[1] << "*\u221A(2))/2^" << z[2];
     return os;
 }

@@ -37,7 +37,7 @@ SO6::SO6(std::string n){
  * @param second array of Z2 of length 6
  * @return -1 if first < second, 0 if equal, 1 if first > second
  */
-int lexComp(Z2* first, Z2* second) {
+int compareLists(Z2 first[6], Z2 second[6]) {
     for(int i = 0; i < 6 ; i++) {
         if(first[i].toFloat() < second[i].toFloat()) return -1;
         if(first[i].toFloat() > second[i].toFloat()) return 1;
@@ -81,29 +81,52 @@ SO6::SO6(Z2 a[6][6], std::string n){
  * @return matrix multiplication of (*this) and other
  */
 SO6 SO6::operator*(SO6& other){
-    //multiplies operators
+    //multiplies operators assuming COLUMN,ROW indexing
     SO6 prod(name + other.getName());
     Z2 next;
     for(int i=0; i<6; i++){
         for(int j = 0; j<6; j++){
             for(int k = 0; k<6; k++){
-                next = arr[i][k]*other(k,j);
-                prod(i,j) += next;
+                next = arr[k][i]*other(j,k);
+                prod(j,i) += next;
             }
         }
     }
-    prod.genOneNorm();
     return prod;
 }
 
-short SO6::lexComp(SO6 &other) {
-    for(int i = 0; i<6; i++) {
-        for(int j = 0; j < 6 ; j++) {
-            if(arr[j][i].toFloat() < other.arr[j][i].toFloat()) return -1;
-            if(arr[j][i].toFloat() > other.arr[j][i].toFloat()) return 1;
+SO6 SO6::sort(SO6& other) {
+    const Z2 nullZ2 = Z2(0,0,0);
+    Z2 list[6]; 
+    SO6 toReturn;
+    for(int i = 0; i<6 ; i++) {
+        list[i] = nullZ2;
+    }
+    for(int i = 0; i<6 ; i++) {
+        if(compareLists(list,arr[i]) <= 0) {
+            for(int j = 0; j < 6; j++) toReturn.arr[i][j] = arr[i][j];
+        }
+        else {
+            for(int j = 0; j < 6; j++) toReturn.arr[i][j] = -arr[i][j];   
         }
     }
-    return 0;
+    return toReturn;
+}
+
+/**
+ * @brief 
+ * Assume we have input as 
+ * 
+ * @param other 
+ * @return short 
+ */
+short SO6::lexComp(SO6 &other) {
+    int compRes;
+    for(int i = 0; i<6; i++) {
+        compRes = compareLists(arr[i], other.arr[i]);
+        if(compRes != 0) return compRes;
+    }
+    return 0;                   // They're equal
 } 
 
 /** overloads == method to check equality up to signed column permutation
@@ -111,21 +134,21 @@ short SO6::lexComp(SO6 &other) {
  *  @return whether or not (*this) and other are equivalent up to signed column permutation
  */
 bool SO6::operator==(SO6 &other) {
-    // int tot;
-    // bool flag;
-    Z2 dot_product;
-    Z2 next;
-    for(int i = 0; i < 6; i++) {
-        for(int j = 0; j < 6; j++) {
-            dot_product = Z2(0,0,0);
-            for(int k = 0; k <6; k++) {
-                next = arr[i][k]*other(j,k);
-                dot_product += next;
+    bool perms[6] = { false, false, false, false, false, false };
+    bool isMatch;
+    for (int i = 0; i < 6; i++) {
+        isMatch = false;                                                                            // Column i is presently unmatched
+        for (int j = 0; j < 6; j++) {
+            if(perms[j]) continue;                                                                  // If we have already matched this column of s, don't look at it again
+            isMatch = std::equal(std::begin(arr[i]),std::end(arr[i]),std::begin(other.arr[j]));     // Check if the columns are equal
+            if(isMatch) {
+                perms[j]=true;                                                                      // Exclude j in the future
+                break;
             }
-            if(dot_product[2] != 0) return false;
-        }
+        }    
+        if(!isMatch) return false;                              //We completed a loop with no match, so return false at this point
     }
-    return true;
+    return true;                                                // Everything was matched
 }
 
 void SO6::genOneNorm()
@@ -136,7 +159,6 @@ void SO6::genOneNorm()
         norm += tmp;
     }
 }
-
 
 //Returns true if and only if s and o are +/- column permutations of each other
 bool SO6::isPerm(SO6 s) {
