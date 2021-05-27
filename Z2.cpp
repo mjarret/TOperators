@@ -92,6 +92,15 @@ bool Z2::operator==(const Z2& other){
 }
 
 /**
+ * Overloads the != operator for Z2
+ * @param other reference to Z2 object to be compared to
+ * @return whether or not the entries of the two Z2s are equal
+ */
+bool Z2::operator!=(const Z2& other){
+    return !(*this == other);
+}
+
+/**
  * Overloads the = operator for Z2
  * @param other reference to object make *this equal to
  * @return *this reference to this object which has been made equal to other

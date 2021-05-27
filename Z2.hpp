@@ -11,6 +11,7 @@ public:
     Z2 operator-(Z2&); //handles subtraction
     Z2 operator*(const Z2&); //function that handles multiplication
     bool operator==(const Z2&); //function that checks equality between two Z2
+    bool operator!=(const Z2&); //function that checks equality between two Z2
     Z2& operator=(const Z2&); //function that makes the operator have equal entries to parameter
     Z2& reduce(); //auxiliary function to make sure every triad is in a consistent most reduced form
     int* scale(const int&); //auxiliary function to make sure that when addition is performed the exponents in the denominators are equal

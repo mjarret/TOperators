@@ -98,7 +98,8 @@ void SO6::genOneNorm()
 {
     norm = Z2();
     for (int i = 0; i < 6; i++) {
-        norm += arr[0][i].abs();
+        Z2 tmp = arr[0][i].abs();
+        norm += tmp;
     }
 }
 
@@ -107,41 +108,37 @@ void SO6::genOneNorm()
 bool SO6::isPerm(SO6 s) {
     bool perms[6] = { false, false, false, false, false, false };
     int permCount = 0;
+    bool isMatch = false;
+    Z2 ns = Z2(-1,0,0);
     for (int i = 0; i < 6; i++) {
+        isMatch = false;                                        // Column i is presently unmatched
         for (int j = 0; j < 6; j++) {
-            if (!perms[j]) {
-                //sign is true if and only if columns should have the same sign
-                bool sign = true;
-                int k;
-                for (k = 0; k < 6; k++) {
-                    if((arr[k][i].abs() == s.arr[k][j].abs()) && !(arr[k][i] == Z2())) {
-                        //Find the first two nonzero values with equal magnitude to get sign
-                        bool sign = arr[k][i].abs() + s.arr[k][j].abs() == (arr[k][i] + s.arr[k][j]).abs();
-                        break;
-                    }
-                }
-                if (k == 6) {
-                    break;
-                }
-                k = 0;
-                while (k < 6) {
-                    if (!((arr[k][i].abs() == s.arr[k][j].abs()) && ((arr[k][i] == s.arr[k][j]) != !sign))) {
-                        break;
-                    }
-                    k++;
-                }
-                if (k == 6) {
-                    perms[j] = true;
-                    permCount++;
-                    break;
-                }
+            if(perms[j]) continue;                              // If we have already matched this column of s, don't look at it again
+            
+            // Check if they match with the same sign
+            for(int k = 0; k < 6; k++) {
+               if(arr[k][i] != s.arr[k][j]) break;           // We need them to match for every element. Should overload !=   
+               if(k == 5) isMatch = true;                       // Only hit me if everything has matched
             }
-        }
-        if (i == permCount) {
-            return false;
-        }
+            if(isMatch) {                                       // If we matched, we can move on at this point
+                perms[j] = true;                                // Exclude j from future consideration
+                break;                                          // Move to next value of i
+            }
+
+            // Check if they match with opposite sign, can be combined with above methods to read easier
+            for(int k = 0; k <6; k++) {
+                if(ns*arr[k][i] != s.arr[k][j]) break;
+                if(k == 5) isMatch = true;
+            }
+
+            if(isMatch) {
+                perms[j] = true;
+                break;
+            }
+        }    
+        if(!isMatch) return false;  //We completed a loop with no match, so return false at this point
     }
-    return true;
+    return true; // Everything was matched
 }
 
 /**
