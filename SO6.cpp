@@ -109,7 +109,6 @@ bool SO6::isPerm(SO6 s) {
     bool perms[6] = { false, false, false, false, false, false };
     int permCount = 0;
     bool isMatch = false;
-    Z2 ns = Z2(-1,0,0);
     for (int i = 0; i < 6; i++) {
         isMatch = false;                                        // Column i is presently unmatched
         for (int j = 0; j < 6; j++) {
@@ -127,7 +126,7 @@ bool SO6::isPerm(SO6 s) {
 
             // Check if they match with opposite sign, can be combined with above methods to read easier
             for(int k = 0; k <6; k++) {
-                if(ns*arr[k][i] != s.arr[k][j]) break;
+                if(-arr[k][i] != s.arr[k][j]) break;
                 if(k == 5) isMatch = true;
             }
 

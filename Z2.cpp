@@ -62,6 +62,15 @@ Z2& Z2::operator+=(Z2& other){
 
 /**
  * Overloads the - operator for Z2
+ * @param 
+ * @return negation of Z2
+ */
+Z2 Z2::operator-(){
+    return Z2(-val[0],-val[1],val[2]);
+}
+
+/**
+ * Overloads the - operator for Z2
  * @param other reference to Z2 object to be subtracted
  * @return summation the subtraction *this - other
  */

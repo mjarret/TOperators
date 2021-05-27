@@ -8,6 +8,7 @@ public:
     inline const int& operator[](int i) const{return val[i];} //does the same but for const Z2
     Z2 operator+(Z2&); //handles addition
     Z2& operator+=(Z2&); //handles +=
+    Z2 operator-(); //handles negation
     Z2 operator-(Z2&); //handles subtraction
     Z2 operator*(const Z2&); //function that handles multiplication
     bool operator==(const Z2&); //function that checks equality between two Z2
