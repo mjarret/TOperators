@@ -25,7 +25,7 @@ public:
     Z2 abs(); //Returns the absolute value
     friend std::ostream& operator<<(std::ostream&,const Z2&); //display
     float toFloat(); //Returns the Z2 object as a float
-    //int getLDE(); //gives the denominator exponent of sqrt(2).
+    int getLDE() {return 0;}; //gives the denominator exponent of sqrt(2).
 private:
     int val[3]; //values of the Z2
     int reg[3]; //workspace array

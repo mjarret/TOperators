@@ -12,19 +12,20 @@ public:
     void sort();
     inline Z2& operator()(int i, int j){return arr[i][j];} //returns the (i,j)th entry
     bool operator%(SO6&);
+    bool operator<(SO6&);
     inline const Z2& operator()(int i, int j) const{return arr[i][j];} //returns the (i,j)th entry but for const
     bool operator==(SO6&); //checking equality up to signed permutation
     // inline std::string getName(){return(name);} //getter for Name
     // inline void setName(std::string newName){name = newName;}
-    //inline int getLDE(){return(LDE);} //getter for LDE
+    inline int getLDE(){return(LDE);} //getter for LDE
     void genOneNorm(); //Returns 1-norm of the first row
     bool isPerm(SO6 s); //Returns true if and only if s is similar to this object
     inline float normFloat() { return norm.toFloat(); }
-    //void genLDE(); //generates LDE, called after multiplication and constructor
+    void genLDE(); //generates LDE, called after multiplication and constructor
     friend std::ostream& operator<<(std::ostream&,const SO6&); //display
 private:
     Z2 arr[6][6];
     // std::string name;
     Z2 norm;
-    //int LDE;
+    int LDE;
 };

@@ -158,6 +158,14 @@ void SO6::sort() {
     }
 }
 
+bool SO6::operator<(SO6 &other) {
+    for(int i = 0; i < 6; i++) {
+        if(lexLess(arr[i], other.arr[i])) return true;
+        if(lexLess(other.arr[i], arr[i])) return false;
+    }
+    return false;
+}
+
 /** overloads == method to check equality of SO6 matrices
  *  @param other reference to SO6 to be checked against
  *  @return whether or not (*this) and other are equivalent
@@ -252,16 +260,16 @@ bool SO6::isPerm(SO6 s) {
 /**
  * Generates LDE. Needs to be called any time the matrix is modified to make sure LDE stays current
  */
-//void SO6::genLDE(){
-//    int maximum = 0;
-//    for(int i = 0; i<6; i++){
-//        for(int j = 0; j<6; j++){
-//            LDE = arr[i][j].getLDE();
-//            maximum = std::max(LDE,maximum);
-//        }
-//    }
-//    LDE = maximum;
-//}
+void SO6::genLDE(){
+   int maximum = 0;
+   for(int i = 0; i<6; i++){
+       for(int j = 0; j<6; j++){
+           LDE = arr[i][j].getLDE();
+           maximum = std::max(LDE,maximum);
+       }
+   }
+   LDE = maximum;
+}
 
 /**
  * Overloads << function for SO6.

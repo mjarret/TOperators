@@ -26,9 +26,9 @@ using namespace std;
  * @return T[i+1,j+1]
  */
 
-SO6 tMatrix(int i, int j){
+SO6 tMatrix(int j, int i){
     // Generates the T Matrix T[i+1, j+1]
-    SO6 t("T("+to_string(i)+","+to_string(j)+")");
+    SO6 t;
     int sign;
     if((i+1==j&&i<=4&&i>=0)||(j+1==i&&j<=4&&j>=0))
         sign = 1;
@@ -41,7 +41,7 @@ SO6 tMatrix(int i, int j){
     t(i,j) = Z2(0,-sign, 1);
     t(j,i) = Z2(0, sign, 1);
     t(j,j) = Z2(0,1,1);
-    t.genOneNorm();
+    t.sort();
     return(t);
 }
 
