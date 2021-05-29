@@ -2,7 +2,7 @@
 class Z2{
 // elements of Z[1/sqrt(2)] are stored in the form (val[0] + val[1]*sqrt(2))/2^val[2]
 public:
-    Z2(int, int, int); // the ints paseed form the entries of val
+    Z2(const int,const int,const int); // the ints paseed form the entries of val
     Z2();// the entries of val are all 0
     inline int& operator[](int i){return val[i];} //returns ith component of val
     inline const int& operator[](int i) const{return val[i];} //does the same but for const Z2
@@ -10,8 +10,14 @@ public:
     Z2& operator+=(Z2&); //handles +=
     Z2 operator-(); //handles negation
     Z2 operator-(Z2&); //handles subtraction
+    bool operator<(Z2&);
+    bool operator<(const int&);
+    bool operator>(Z2&);
+    bool operator>=(Z2&);
+    bool operator<=(Z2&);
     Z2 operator*(const Z2&); //function that handles multiplication
     bool operator==(const Z2&); //function that checks equality between two Z2
+    bool operator==(const int&); //function that checks equality between two Z2
     bool operator!=(const Z2&); //function that checks equality between two Z2
     Z2& operator=(const Z2&); //function that makes the operator have equal entries to parameter
     Z2& reduce(); //auxiliary function to make sure every triad is in a consistent most reduced form

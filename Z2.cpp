@@ -9,7 +9,7 @@
  * @param b sqrt(2) part of numerator
  * @param c log_2 of the denominator
  */
-Z2::Z2(int a, int b, int c){
+Z2::Z2(const int a, const int b, const int c){
     val[0] = a;
     val[1] = b;
     val[2] = c;
@@ -97,7 +97,16 @@ Z2 Z2::operator*(const Z2& other){
  * @return whether or not the entries of the two Z2s are equal
  */
 bool Z2::operator==(const Z2& other){
-    return (val[0]==other[0]&& val[1]==other[1] && val[2]==other[2]);
+    return (val[0]==other[0] && val[1]==other[1] && val[2]==other[2]);
+}
+
+/**
+ * Overloads the == operator for Z2
+ * @param other reference to Z2 object to be compared to
+ * @return whether or not the entries of the two Z2s are equal
+ */
+bool Z2::operator==(const int& i){
+    return *this == Z2(i,0,0);
 }
 
 /**
@@ -110,11 +119,70 @@ bool Z2::operator!=(const Z2& other){
 }
 
 /**
+ * Overloads the < operator for Z2
+ * @param other reference to Z2 object to be compared to
+ * @return true if this < other and false otherwise
+ */
+bool Z2::operator<(Z2& other){
+    Z2 diff = *this - other;                                        // Find difference and store as Z2
+    if(diff.val[0] < 0) {                                    
+        if(diff.val[1] <= 0) return true;                           // a<0 and b<=0 means that diff < 0
+        unsigned long a2 = diff.val[0]*diff.val[0];                 // compute a^2    
+        unsigned long b2 = (diff.val[1]*diff.val[1]) << 1;          // compute 2b^2
+        if(a2 > b2) return true;                                    // a<0, b>0, and a^2 > 2 b^2 implies that a+sqrt(2)b <0
+        return false;                                               // a<0, b>0, and a^2 <= 2 b^2 implies that a+sqrt(2)b >= 0
+    }
+    if(diff.val[1] >= 0) return false;                              // a>=0 and b>=0 means that diff >=0
+    unsigned long a2 = diff.val[0]*diff.val[0];                     // compute a^2    
+    unsigned long b2 = (diff.val[1]*diff.val[1]) << 1;              // compute 2b^2
+    if(a2 < b2) return true;                                        // a>0, b<0, and a^2 < 2b^2 implies that a + sqrt(2) b < 0
+    return false;                                                   // a>0, b<0, and a^2 >= 2b^2 implies that a+sqrt(2)b >= 0
+}
+
+/**
+ * Overloads the < operator for Z2
+ * @param other reference to an integer
+ * @return true if this < other and false otherwise
+ */
+bool Z2::operator<(const int & i){
+    Z2 tmp = Z2(i,0,0);
+    return *this < tmp;
+}      
+
+/**
+ * Overloads the > operator for Z2
+ * @param other reference to Z2 object to be compared to
+ * @return true if this < other and false otherwise
+ */
+bool Z2::operator>(Z2& other){
+    return other < *this;
+}
+
+/**
+ * Overloads the >= operator for Z2
+ * @param other reference to Z2 object to be compared to
+ * @return whether or not the entries of the two Z2s are equal
+ */
+
+bool Z2::operator>=(Z2& other){
+    return !(*this < other);
+}
+
+/**
+ * Overloads the <= operator for Z2
+ * @param other reference to Z2 object to be compared to
+ * @return whether or not the entries of the two Z2s are equal
+ */
+
+bool Z2::operator<=(Z2& other){
+    return !(*this > other);
+}
+
+/**
  * Overloads the = operator for Z2
  * @param other reference to object make *this equal to
  * @return *this reference to this object which has been made equal to other
  */
-
 Z2& Z2::operator=(const Z2& other){
     //assigns an operator
     val[0] = other[0];
@@ -128,16 +196,15 @@ Z2& Z2::operator=(const Z2& other){
  * @return *this reference to simplified object
  */
 Z2& Z2::reduce(){
-    // reduces a Z2 to its lowest denominator exponent expression
-    while(val[0]%2 == 0 && val[1]%2 == 0 && val[2]>0){
+    if(val[0] == 0 && val[1] == 0) {
+        val[2] = 0;
+        return *this;
+    }
+    // reduces a Z2 to its lowest denominator exponent expression, can be negative
+    while(val[0]%2 == 0 && val[1]%2 == 0){
         val[0] >>= 1;
         val[1] >>= 1;
         val[2]--;
-    }
-    if(val[2]<0){
-        val[0] <<= -val[2];
-        val[1] <<= -val[2];
-        val[2] = 0;
     }
     return *this;
 }
@@ -176,24 +243,8 @@ Z2 Z2::abs()
 
 float Z2::toFloat()
 {
-    return (float)(val[0] + val[1] * sqrt(2.0) / pow(2.0, val[2]));
+    return (float)(val[0] + val[1] * sqrt(2.0)) / pow(2.0, val[2]);
 }
-
-/**
- * Gives the denominator exponent when this operator is reduced with sqrt(2) in the denominator
- * @return exponent of sqrt(2) in reduced form of the operator
- */
-//int z2::getlde(){
-//    reg[0] = val[0];
-//    reg[1] = val[1];
-//    reg[2] = 2*val[2];
-//    while(reg[0]%2 == 0 && reg[2]>0){
-//        reg[0] = reg[1];
-//        reg[1] = reg[0] >>= 1;
-//        --reg[2];
-//    }
-//    return(reg[2]);
-//}
 
 /**
  * Overloads << function for Z2
@@ -202,6 +253,23 @@ float Z2::toFloat()
  * @returns reference ostream with the Z2's display form appended
  */
 std::ostream& operator<<(std::ostream& os, const Z2& z){
-    os << '(' << z[0] << '+' << z[1] << "*\u221A(2))/2^" << z[2];
+    if(!z[0]) {
+        if(!z[1]) return (os << 0);
+        os << z[1] << "\u221A2";
+        if(!z[2]) return os;
+        os << "e" << -z[2];
+        return os;
+    }
+    if(!z[1]) {
+        os << z[0];
+        if(!z[2]) return os;
+        os << "e" << -z[2];
+        return os;
+    }
+    if(!z[2]) {
+        os << z[0] << '+' << z[1] << "\u221A2";
+        return os;    
+    }
+    os << '(' << z[0] << '+' << z[1] << "\u221A2)e" << -z[2];
     return os;
 }
