@@ -17,6 +17,7 @@
 #include <thread>
 #include <unordered_map>
 #include <future>
+#include <math.h>
 #include "Z2.hpp"
 #include "SO6.hpp"
 
@@ -59,22 +60,23 @@ void push(struct Node* &head, SO6 so6) {
  * @return T[i+1,j+1]
  */
 
-SO6 tMatrix(int i, int j) {
+SO6 tMatrix(int j, int i) {
     // Generates the T Matrix T[i+1, j+1]
-    SO6 t("T(" + to_string(i) + "," + to_string(j) + ")");
+    // SO6 t("T(" + to_string(i) + "," + to_string(j) + ")");
+    SO6 t;
     int sign;
     if ((i + 1 == j && i <= 4 && i >= 0) || (j + 1 == i && j <= 4 && j >= 0))
         sign = 1;
     else
         sign = -1;
     for (int k = 0; k < 6; k++) {
-        t(k, k) = Z2(1, 0, 0);
+        t(k, k) = Z2(1,0,0);
     }
     t(i, i) = Z2(0, 1, 1);
     t(i, j) = Z2(0, -sign, 1);
     t(j, i) = Z2(0, sign, 1);
     t(j, j) = Z2(0, 1, 1);
-    t.genOneNorm();
+    t.sort();
     return(t);
 }
 
@@ -132,7 +134,7 @@ void prunePerms(unordered_map<float, struct Node*> t, unordered_map<float, struc
         while (tnode->next != NULL) {
             struct Node* cnode = tnode->next;
             while (cnode->next != NULL) {
-                if (tnode->next->so6.isPerm(cnode->next->so6)) {
+                if (tnode->next->so6==(cnode->next->so6)) {
                     cnode->next = cnode->next->next;
                     nextDelete = true;
                 }
@@ -148,7 +150,7 @@ void prunePerms(unordered_map<float, struct Node*> t, unordered_map<float, struc
             if (head != t2.end()) {
                 cnode = head->second;
                 while (cnode->next != NULL) {
-                    if (tnode->next->so6.isPerm(cnode->next->so6)) {
+                    if (tnode->next->so6==(cnode->next->so6)) {
                         tnode->next = tnode->next->next;
                         nextDelete = true;
                         break;
@@ -174,7 +176,7 @@ void writeSO6(unordered_map<float, struct Node*> t, string fileName) {
     while (itr != t.end()) {
         struct Node* node = itr++->second->next;
         while (node != NULL) {
-            write << node->so6.getName() << "\n";
+            // write << node->so6.getName() << "\n";
             write << node->so6;
             matrixCount++;
             node = node->next;
