@@ -117,9 +117,11 @@ void SO6::lexOrder() {
     }
 }
 
-bool SO6::operator<(SO6 &other) {
+bool SO6::operator<(const SO6 &other) const {
+    SO6 tmp = other;
+    SO6 tmp2 = *this;
     for(int col = 0; col < 6; col++) {
-        int lc = lexComp(arr[col],other[col]);
+        int lc = lexComp(tmp2[col],tmp[col]);
         if(lc < 0) return true;
         if(lc > 0) return false; 
     }

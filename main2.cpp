@@ -126,6 +126,20 @@ vector<vector<SO6>> prodHelper(vector<vector<SO6>>& batch, vector<SO6>& tmats){
  * @param tmats the vector of SO6 whose elements will be multiplying those of TminusOne
  * @return the product of all elements of TminusOne and tmats, sorted by LDE
  */
+// vector<vector<SO6>> genAllProds(vector<vector<SO6>>& TminusOne, vector<SO6>& tmats, int numThreads){
+//     vector<vector<vector<SO6>>> threadinput = divideVect(TminusOne, numThreads);
+//     future<vector<vector<SO6>>> threads[numThreads];
+//     vector<vector<SO6>> prod[numThreads];
+//     for(int i = 0; i<numThreads; i++)
+//         threads[i] = async(launch::async, prodHelper, ref(threadinput[i]), ref(tmats));
+//     for(int i = 0; i<numThreads; i++){
+//         prod[i] = threads[i].get();
+//     }
+//     vector<vector<SO6>> toReturn(prod[0].size());
+//     for(int i = 0; i<numThreads; i++)
+//         toReturn = mergedVect(toReturn, prod[i]);
+//     return(toReturn);
+// }
 vector<vector<SO6>> genAllProds(vector<vector<SO6>>& TminusOne, vector<SO6>& tmats, int numThreads){
     vector<vector<vector<SO6>>> threadinput = divideVect(TminusOne, numThreads);
     future<vector<vector<SO6>>> threads[numThreads];
@@ -140,7 +154,6 @@ vector<vector<SO6>> genAllProds(vector<vector<SO6>>& TminusOne, vector<SO6>& tma
         toReturn = mergedVect(toReturn, prod[i]);
     return(toReturn);
 }
-
 
 
 //int getLength(vector<vector<SO6>>& input){
@@ -287,7 +300,7 @@ void pruneAllPerms(vector<vector<SO6>>& unReduced, vector<vector<SO6>>& tMinusTw
 int main(){
 
     //Asking for number of threads and tCount to generate to
-    // Seems to slow things down, so may remove this and just hardcode it in.
+    // Seems to slow things down, so may remove this and just hardcode it in
     int numThreads, tCount;
     std::cout<<"How many threads would you like to utilize? Please enter here: ";
     cin>>numThreads;
@@ -299,13 +312,19 @@ int main(){
     auto tbefore = chrono::high_resolution_clock::now();
     //generating list of T matrices
     //in the order Andrew wanted
-    vector<SO6> ts; //t count 1 matrices
+    set<SO6> ts;
+    // vector<SO6> ts; //t count 1 matrices
     for(int i = 0; i<15; i++){
-        if(i<5)       ts.push_back(tMatrix(0,i+1));
-        else if(i<9)  ts.push_back(tMatrix(1, i-3));
-        else if(i<12) ts.push_back(tMatrix(2, i-6));
-        else if(i<14) ts.push_back(tMatrix(3, i-8));
-        else          ts.push_back(tMatrix(4,5));
+        // if(i<5)       ts.push_back(tMatrix(0,i+1));
+        // else if(i<9)  ts.push_back(tMatrix(1, i-3));
+        // else if(i<12) ts.push_back(tMatrix(2, i-6));
+        // else if(i<14) ts.push_back(tMatrix(3, i-8));
+        // else          ts.push_back(tMatrix(4,5));
+        if(i<5)       ts.insert(tMatrix(0,i+1));
+        else if(i<9)  ts.insert(tMatrix(1, i-3));
+        else if(i<12) ts.insert(tMatrix(2, i-6));
+        else if(i<14) ts.insert(tMatrix(3, i-8));
+        else          ts.insert(tMatrix(4,5));
     }
     auto tafter = chrono::high_resolution_clock::now();
     std::cout<<"Generated T count 1 \n";
@@ -318,20 +337,32 @@ int main(){
 
 
     //Generating Higher T-Counts
-    vector<vector<SO6>> prior;
-    vector<vector<SO6>> current = vector<vector<SO6>>{vector<SO6>(), ts};
-    vector<vector<SO6>> next;
+    // vector<vector<SO6>> prior;
+    // vector<vector<SO6>> current = vector<vector<SO6>>{vector<SO6>(), ts};
+    // vector<vector<SO6>> next;
+    // vector<vector<SO6>> prior;
+    set<SO6> current = ts;
+    set<SO6> next;
+
     for(int i = 0; i<tCount-1; i++){
         
         std::cout<<"\n\n\nBeginning T-Count "<<(i+2)<<"\n";
         auto start = chrono::high_resolution_clock::now();
-        next = genAllProds(current, ts, numThreads);
+        
+        for(SO6 t : ts) {
+            for(SO6 curr : current) {
+                next.insert(t*curr);
+            }
+        }
+        current = next;
+        
+        // next = genAllProds(current, ts, numThreads);
         auto end = chrono::high_resolution_clock::now();
         auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
         std::cout << "Computed all products in: " << ret << "ms\n";
         
         start = chrono::high_resolution_clock::now();
-        pruneAllPerms(next, prior, numThreads);
+        // pruneAllPerms(next, prior, numThreads);
         end = chrono::high_resolution_clock::now();
         ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
         std::cout << "Eliminated duplicates in: " << ret << "ms\n";
@@ -340,7 +371,7 @@ int main(){
         //     cout<<"LDE"<<j<<": "<<next[j].size()<< "\n";
         // }
 
-        std::cout<< next[0].size()<< " matrices\n";
+        std::cout<< next.size()<< " matrices\n";
 
         // start = chrono::high_resolution_clock::now();
         // string fileName = "T" + to_string(i+2) + ".txt";
@@ -355,8 +386,8 @@ int main(){
         // end = chrono::high_resolution_clock::now();
         // ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
         // cout<<"Wrote T-Count "<<(i+2)<<" to 'T"<<(i+2)<<".txt' in " << ret << "ms\n\n";
-        prior = current;
-        current = next;
+        // prior = current;
+        // current = next;
     }
     chrono::duration<double> timeelapsed = chrono::high_resolution_clock::now() - tbefore;
     std::cout<< "\nTotal time elapsed: "<<chrono::duration_cast<chrono::milliseconds>(timeelapsed).count()<<"ms\n";

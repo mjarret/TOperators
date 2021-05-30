@@ -10,7 +10,7 @@ public:
     void lexOrder();
     inline Z2& operator()(int i, int j){return arr[i][j];} //returns the (i,j)th entry
     // bool operator%(SO6&);
-    bool operator<(SO6&);
+    bool operator<(const SO6&) const;
     inline const Z2& operator()(int i, int j) const{return arr[i][j];} //returns the (i,j)th entry but for const
     bool operator==(SO6&); //checking equality up to signed permutation
     Z2* operator[](int i){return arr[i];};
