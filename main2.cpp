@@ -323,7 +323,7 @@ int main(){
     //in the order Andrew wanted
     const SO6 I = identity();
     set<SO6> ts;
-    for(int i = 0; i<15; i++){
+    for(int i = 0; i<15; i++) {
         if(i<5)       ts.insert(tMatrix(0,i+1));
         else if(i<9)  ts.insert(tMatrix(1, i-3));
         else if(i<12) ts.insert(tMatrix(2, i-6));
@@ -343,16 +343,20 @@ int main(){
         // Main loop here
         for(SO6 t : ts) {
             for(SO6 curr : current) {
-                prior.insert(curr);             // Experimentally determined that comparing T to only T-2 does NOT work, maybe can do even/odd and shave off a bit more time, but this seems to not really impact anything
                 next.insert(t*curr);
             }
-            for(SO6 p : prior) next.erase(p);
+            for(SO6 p : prior) {
+                current.insert(p);     // Experimentally determined that comparing T to only T-2 does NOT work, maybe can do even/odd and shave off a bit more time, but this seems to not really impact anything
+                next.erase(p);
+            }
         }
-        current = next;
         // End main loop
 
+        auto end = chrono::high_resolution_clock::now();   
+        prior = current;
+        current = next;
+
         // Begin reporting
-        auto end = chrono::high_resolution_clock::now();
         auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
         std::cout << ">>>Found " << next.size() << " new matrices in " << ret << "ms\n";
 
