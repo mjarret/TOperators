@@ -96,7 +96,7 @@ Z2 Z2::operator*(const Z2& other){
  * @param other reference to Z2 object to be compared to
  * @return whether or not the entries of the two Z2s are equal
  */
-bool Z2::operator==(const Z2& other){
+bool Z2::operator==(const Z2& other){    
     return (val[0]==other[0] && val[1]==other[1] && val[2]==other[2]);
 }
 
@@ -105,18 +105,8 @@ bool Z2::operator==(const Z2& other){
  * @param other reference to Z2 object to be compared to
  * @return whether or not the entries of the two Z2s are equal
  */
-bool Z2::operator==(const int& i){
-    return *this == Z2(i,0,0);
-}
-
-/**
- * Overloads the != operator for Z2
- * @param other reference to Z2 object to be compared to
- * @return whether or not the entries of the two Z2s are equal
- */
-bool Z2::operator!=(const Z2& other){
-    return !(*this == other);
-}
+bool Z2::operator==(const int& i){return *this == Z2(i,0,0);}
+bool Z2::operator!=(const Z2& other){return !(*this == other);}
 
 /**
  * Overloads the < operator for Z2
@@ -127,17 +117,20 @@ bool Z2::operator<(Z2& other){
     Z2 diff = *this - other;                                        // Find difference and store as Z2
     if(diff.val[0] < 0) {                                    
         if(diff.val[1] <= 0) return true;                           // a<0 and b<=0 means that diff < 0
-        unsigned long a2 = diff.val[0]*diff.val[0];                 // compute a^2    
-        unsigned long b2 = (diff.val[1]*diff.val[1]) << 1;          // compute 2b^2
+        unsigned int a2 = diff.val[0]*diff.val[0];                  // compute a^2    
+        unsigned int b2 = (diff.val[1]*diff.val[1]) << 1;           // compute 2b^2
         if(a2 > b2) return true;                                    // a<0, b>0, and a^2 > 2 b^2 implies that a+sqrt(2)b <0
         return false;                                               // a<0, b>0, and a^2 <= 2 b^2 implies that a+sqrt(2)b >= 0
     }
     if(diff.val[1] >= 0) return false;                              // a>=0 and b>=0 means that diff >=0
-    unsigned long a2 = diff.val[0]*diff.val[0];                     // compute a^2    
-    unsigned long b2 = (diff.val[1]*diff.val[1]) << 1;              // compute 2b^2
+    unsigned int a2 = diff.val[0]*diff.val[0];                      // compute a^2    
+    unsigned int b2 = (diff.val[1]*diff.val[1]) << 1;               // compute 2b^2
     if(a2 < b2) return true;                                        // a>0, b<0, and a^2 < 2b^2 implies that a + sqrt(2) b < 0
     return false;                                                   // a>0, b<0, and a^2 >= 2b^2 implies that a+sqrt(2)b >= 0
 }
+bool Z2::operator>(Z2& other)  {return other < *this;}
+bool Z2::operator>=(Z2& other) {return !(*this < other);}
+bool Z2::operator<=(Z2& other) {return !(*this > other);}
 
 /**
  * Overloads the < operator for Z2
@@ -147,36 +140,12 @@ bool Z2::operator<(Z2& other){
 bool Z2::operator<(const int & i){
     Z2 tmp = Z2(i,0,0);
     return *this < tmp;
-}      
+}  
 
-/**
- * Overloads the > operator for Z2
- * @param other reference to Z2 object to be compared to
- * @return true if this < other and false otherwise
- */
-bool Z2::operator>(Z2& other){
-    return other < *this;
-}
-
-/**
- * Overloads the >= operator for Z2
- * @param other reference to Z2 object to be compared to
- * @return whether or not the entries of the two Z2s are equal
- */
-
-bool Z2::operator>=(Z2& other){
-    return !(*this < other);
-}
-
-/**
- * Overloads the <= operator for Z2
- * @param other reference to Z2 object to be compared to
- * @return whether or not the entries of the two Z2s are equal
- */
-
-bool Z2::operator<=(Z2& other){
-    return !(*this > other);
-}
+bool Z2::operator>(const int & i){
+    Z2 tmp = Z2(i,0,0);
+    return *this > tmp;
+}  
 
 /**
  * Overloads the = operator for Z2
@@ -222,30 +191,7 @@ int* Z2::scale(const int& k){
     reg[2] = k;
     return reg;
 }
-
-/**
- * Gives the absolute value of the Z2 element
- * @return |Z2|
- */
-
-Z2 Z2::abs()
-{
-    if ((val[0] <= 0 && val[1] <= 0) || (val[0] >= 0 && val[1] >= 0)) {
-        return Z2(std::abs(val[0]), std::abs(val[1]), val[2]);
-    }
-    if (std::abs(val[0]) >= std::abs(val[1] * sqrt(2))) {
-        int sign = (val[0] > 0) ? 1 : -1;
-        return Z2(sign * val[0], sign * val[1], val[2]);
-    }
-    int sign = (val[1] > 0) ? 1 : -1;
-    return Z2(sign * val[0], sign * val[1], val[2]);
-}
-
-float Z2::toFloat()
-{
-    return (float)(val[0] + val[1] * sqrt(2.0)) / pow(2.0, val[2]);
-}
-
+ 
 /**
  * Overloads << function for Z2
  * @param os reference to ostream object needed to implement <<

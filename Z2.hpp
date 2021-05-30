@@ -12,9 +12,10 @@ public:
     Z2 operator-(Z2&); //handles subtraction
     bool operator<(Z2&);
     bool operator<(const int&);
-    bool operator>(Z2&);
-    bool operator>=(Z2&);
-    bool operator<=(Z2&);
+    bool operator>(const int&);
+    bool operator>(Z2& other);
+    bool operator<=(Z2& other);
+    bool operator>=(Z2& other);
     Z2 operator*(const Z2&); //function that handles multiplication
     bool operator==(const Z2&); //function that checks equality between two Z2
     bool operator==(const int&); //function that checks equality between two Z2
@@ -24,8 +25,9 @@ public:
     int* scale(const int&); //auxiliary function to make sure that when addition is performed the exponents in the denominators are equal
     Z2 abs(); //Returns the absolute value
     friend std::ostream& operator<<(std::ostream&,const Z2&); //display
-    float toFloat(); //Returns the Z2 object as a float
+    // float toFloat(); //Returns the Z2 object as a float
     int getLDE() {return 0;}; //gives the denominator exponent of sqrt(2).
+    void negate(){val[0]=-val[0];val[1]=-val[1];}
 private:
     int val[3]; //values of the Z2
     int reg[3]; //workspace array

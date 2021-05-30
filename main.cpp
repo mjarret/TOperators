@@ -76,7 +76,8 @@ SO6 tMatrix(int j, int i) {
     t(i, j) = Z2(0, -sign, 1);
     t(j, i) = Z2(0, sign, 1);
     t(j, j) = Z2(0, 1, 1);
-    t.sort();
+    t.fixSign();
+    t.lexOrder();
     return(t);
 }
 
