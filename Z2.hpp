@@ -12,6 +12,7 @@ public:
     Z2 operator-(Z2&); //handles subtraction
     bool operator<(Z2&);
     bool operator<(const int&);
+    const bool operator<(const Z2& other) const;
     bool operator>(const int&);
     bool operator>(Z2& other);
     bool operator<=(Z2& other);

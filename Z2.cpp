@@ -134,6 +134,31 @@ bool Z2::operator<=(Z2& other) {return !(*this > other);}
 
 /**
  * Overloads the < operator for Z2
+ * @param other reference to Z2 object to be compared to
+ * @return true if this < other and false otherwise
+ */
+const bool Z2::operator<(const Z2& other) const{
+    int k = std::max(val[2],other[2]);
+    int a = val[0] << (k-val[2]);
+    int b = val[1] << (k-val[2]);
+    a = a - (other[0] << (k-other[2]));
+    b = b - (other[1] << (k-other[2]));
+    if(a < 0) {                                    
+        if(b <= 0) return true;                           // a<0 and b<=0 means that diff < 0
+        a*=a;                  // compute a^2    
+        b = (b*b) << 1;           // compute 2b^2
+        if(a > b) return true;                                    // a<0, b>0, and a^2 > 2 b^2 implies that a+sqrt(2)b <0
+        return false;                                               // a<0, b>0, and a^2 <= 2 b^2 implies that a+sqrt(2)b >= 0
+    }
+    if(b >= 0) return false;                              // a>=0 and b>=0 means that diff >=0
+    a*=a;                      // compute a^2    
+    b = (b*b) << 1;               // compute 2b^2
+    if(a < b) return true;                                        // a>0, b<0, and a^2 < 2b^2 implies that a + sqrt(2) b < 0
+    return false;                                                   // a>0, b<0, and a^2 >= 2b^2 implies that a+sqrt(2)b >= 0
+}
+
+/**
+ * Overloads the < operator for Z2
  * @param other reference to an integer
  * @return true if this < other and false otherwise
  */

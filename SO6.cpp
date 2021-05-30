@@ -29,7 +29,7 @@ bool lexLess (Z2 first[6],Z2 second[6]) {
  * @param second 
  * @return int 
  */
-int lexComp (Z2* first, Z2* second) {
+int lexComp (const Z2 first[6], const Z2 second[6]) {
     for(int i = 0; i < 6 ; i++) {
         if(first[i] < second[i]) return -1;
         if(second[i] < first[i]) return 1;
@@ -118,11 +118,8 @@ void SO6::lexOrder() {
 }
 
 bool SO6::operator<(const SO6 &other) const {
-    // SO6 tmp = *this;
-    // SO6 tmp2 = other;
     for(int col = 0; col < 6; col++) {
-        // switch (lexComp(tmp[col],tmp2[col])) {
-        switch (lexComp((*this)[col],other[col])) {   // This requires the -fpermissive option. Copying to new SO6s doesn't help anything and appears to add some overhead. Another workaround would be good.
+        switch (lexComp((*this)[col],other[col])) {   
             case -1: return true;
             case 1: return false;
         }

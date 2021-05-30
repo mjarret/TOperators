@@ -11,12 +11,12 @@ public:
     inline Z2& operator()(int i, int j){return arr[i][j];} //returns the (i,j)th entry
     // bool operator%(SO6&);
     bool operator<(const SO6&) const;
-    inline const Z2& operator()(int i, int j) const{return arr[i][j];} //returns the (i,j)th entry but for const
+    const Z2& operator()(int i, int j) const {return arr[i][j];} //returns the (i,j)th entry but for const
     bool operator==(SO6&); //checking equality up to signed permutation
-    Z2* operator[](int i) const{return arr[i];}  // Return the array element needed. Requires -fpermissive and runs faster than declaring a new array
+    const Z2* operator[](const int i) const {return arr[i];}  // Return the array element needed. 
     // inline std::string getName(){return(name);} //getter for Name
     // inline void setName(std::string newName){name = newName;}
-    inline int getLDE(){return(0);} //getter for LDE
+    int getLDE(){return(0);} //getter for LDE
     // void genOneNorm(); //Returns 1-norm of the first row
     // bool isPerm(SO6 s); //Returns true if and only if s is similar to this object
     // inline float normFloat() { return norm.toFloat(); }
