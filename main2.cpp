@@ -25,13 +25,22 @@
 
 
 using namespace std;
+
+
+SO6 identity() {
+    SO6 I;
+    for(int k =0; k<6; k++) {
+        I(k,5-k) = Z2(1,0,0);
+    }
+    return I;
+}
+
 /**
  * Returns the SO6 object corresponding to T[i+1, j+1]
  * @param i the first index to determine the T matrix
  * @param j the second index to determine the T matrix
  * @return T[i+1,j+1]
  */
-
 SO6 tMatrix(int i, int j){
     // Generates the T Matrix T[i+1, j+1]
     SO6 t;
@@ -312,14 +321,9 @@ int main(){
     auto tbefore = chrono::high_resolution_clock::now();
     //generating list of T matrices
     //in the order Andrew wanted
+    const SO6 I = identity();
     set<SO6> ts;
-    // vector<SO6> ts; //t count 1 matrices
     for(int i = 0; i<15; i++){
-        // if(i<5)       ts.push_back(tMatrix(0,i+1));
-        // else if(i<9)  ts.push_back(tMatrix(1, i-3));
-        // else if(i<12) ts.push_back(tMatrix(2, i-6));
-        // else if(i<14) ts.push_back(tMatrix(3, i-8));
-        // else          ts.push_back(tMatrix(4,5));
         if(i<5)       ts.insert(tMatrix(0,i+1));
         else if(i<9)  ts.insert(tMatrix(1, i-3));
         else if(i<12) ts.insert(tMatrix(2, i-6));
@@ -327,67 +331,40 @@ int main(){
         else          ts.insert(tMatrix(4,5));
     }
     auto tafter = chrono::high_resolution_clock::now();
-    std::cout<<"Generated T count 1 \n";
     
-    // write = ofstream("T1.txt");
-    // for(int i = 0; i<15; i++){
-    //     write<<ts[i];
-    // }
-    // cout<<"Wrote T-Count 1 to 'T1.txt' \n\n";
-
-
-    //Generating Higher T-Counts
-    // vector<vector<SO6>> prior;
-    // vector<vector<SO6>> current = vector<vector<SO6>>{vector<SO6>(), ts};
-    // vector<vector<SO6>> next;
-    // vector<vector<SO6>> prior;
-    set<SO6> current = ts;
+    set<SO6> prior;            
+    set<SO6> current({I});
     set<SO6> next;
 
-    for(int i = 0; i<tCount-1; i++){
-        
-        std::cout<<"\n\n\nBeginning T-Count "<<(i+2)<<"\n";
+    for(int i = 0; i<tCount; i++){
+        std::cout<<"\nBeginning T-Count "<<(i+1)<<"\n";
         auto start = chrono::high_resolution_clock::now();
         
+        // Main loop here
         for(SO6 t : ts) {
             for(SO6 curr : current) {
+                prior.insert(curr);             // Experimentally determined that comparing T to only T-2 does NOT work, maybe can do even/odd and shave off a bit more time, but this seems to not really impact anything
                 next.insert(t*curr);
             }
+            for(SO6 p : prior) next.erase(p);
         }
         current = next;
-        
-        // next = genAllProds(current, ts, numThreads);
+        // End main loop
+
+        // Begin reporting
         auto end = chrono::high_resolution_clock::now();
         auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
-        std::cout << "Computed all products in: " << ret << "ms\n";
-        
+        std::cout << ">>>Found " << next.size() << " new matrices in " << ret << "ms\n";
+
+        // Write results out
         start = chrono::high_resolution_clock::now();
-        // pruneAllPerms(next, prior, numThreads);
+        string fileName = "T" + to_string(i+2) + ".txt";
+        ofstream write = ofstream(fileName);
+        for(SO6 n : next) write<<n;
+        write.close();
         end = chrono::high_resolution_clock::now();
         ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
-        std::cout << "Eliminated duplicates in: " << ret << "ms\n";
-
-        // for(int j = 0; j<next.size(); j++){
-        //     cout<<"LDE"<<j<<": "<<next[j].size()<< "\n";
-        // }
-
-        std::cout<< next.size()<< " matrices\n";
-
-        // start = chrono::high_resolution_clock::now();
-        // string fileName = "T" + to_string(i+2) + ".txt";
-        // ofstream write = ofstream(fileName);
-        // for(int j = 0; j<next.size(); j++){
-        //     for(int k = 0; k<next[j].size(); k++){
-        //         // write<<next[j][k].getName()<<"\n";
-        //         write<<next[j][k];
-        //     }
-        // }
-        // write.close();
-        // end = chrono::high_resolution_clock::now();
-        // ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
-        // cout<<"Wrote T-Count "<<(i+2)<<" to 'T"<<(i+2)<<".txt' in " << ret << "ms\n\n";
-        // prior = current;
-        // current = next;
+        cout<<">>>Wrote T-Count "<<(i+2)<<" to 'T"<<(i+2)<<".txt' in " << ret << "ms\n";
     }
     chrono::duration<double> timeelapsed = chrono::high_resolution_clock::now() - tbefore;
     std::cout<< "\nTotal time elapsed: "<<chrono::duration_cast<chrono::milliseconds>(timeelapsed).count()<<"ms\n";
