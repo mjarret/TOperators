@@ -356,15 +356,15 @@ int main(){
         auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
         std::cout << ">>>Found " << next.size() << " new matrices in " << ret << "ms\n";
 
-        // // Write results out
-        // start = chrono::high_resolution_clock::now();
-        // string fileName = "T" + to_string(i+2) + ".txt";
-        // ofstream write = ofstream(fileName);
-        // for(SO6 n : next) write<<n;
-        // write.close();
-        // end = chrono::high_resolution_clock::now();
-        // ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
-        // cout<<">>>Wrote T-Count "<<(i+2)<<" to 'T"<<(i+2)<<".txt' in " << ret << "ms\n";
+        // Write results out
+        start = chrono::high_resolution_clock::now();
+        string fileName = "T" + to_string(i+2) + ".txt";
+        ofstream write = ofstream(fileName);
+        for(SO6 n : next) write<<n;
+        write.close();
+        end = chrono::high_resolution_clock::now();
+        ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
+        cout<<">>>Wrote T-Count "<<(i+2)<<" to 'T"<<(i+2)<<".txt' in " << ret << "ms\n";
     }
     chrono::duration<double> timeelapsed = chrono::high_resolution_clock::now() - tbefore;
     std::cout<< "\nTotal time elapsed: "<<chrono::duration_cast<chrono::milliseconds>(timeelapsed).count()<<"ms\n";

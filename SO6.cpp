@@ -118,12 +118,14 @@ void SO6::lexOrder() {
 }
 
 bool SO6::operator<(const SO6 &other) const {
-    SO6 tmp = other;
-    SO6 tmp2 = *this;
+    // SO6 tmp = *this;
+    // SO6 tmp2 = other;
     for(int col = 0; col < 6; col++) {
-        int lc = lexComp(tmp2[col],tmp[col]);
-        if(lc < 0) return true;
-        if(lc > 0) return false; 
+        // switch (lexComp(tmp[col],tmp2[col])) {
+        switch (lexComp((*this)[col],other[col])) {   // This requires the -fpermissive option. Copying to new SO6s doesn't help anything and appears to add some overhead. Another workaround would be good.
+            case -1: return true;
+            case 1: return false;
+        }
     }
     return false;
 }
