@@ -339,18 +339,18 @@ int main(){
     for(int i = 0; i<tCount; i++){
         std::cout<<"\nBeginning T-Count "<<(i+1)<<"\n";
         auto start = chrono::high_resolution_clock::now();
-        
+        next.empty();
         // Main loop here
         for(SO6 t : ts) {
-            for(SO6 curr : current) next.insert(t*curr);
-            for(SO6 p : prior) current.insert(p);
-            for(SO6 curr : current) next.erase(curr);    // Experimentally determined that comparing T to only T-2 does NOT work, maybe can do even/odd and shave off a bit more time, but this seems to not really impact anything
+            for(SO6 curr : current) next.insert(t*curr);     // New product list for T + 1 stored as next
+            for(SO6 p : prior) current.insert(p);            // Add <T-1 product list to current product list for T to make current everything <=T (current is larger, so add to current)
+            for(SO6 curr : current) next.erase(curr);        // Erase everything for <=T. Experimentally determined that comparing T to only T-2 does NOT work, maybe can do even/odd and shave off a bit more time, but this seems to not really impact anything
         }
         // End main loop
 
         auto end = chrono::high_resolution_clock::now();   
-        prior = current;
-        current = next;
+        prior = current;                                    // T++
+        current = next;                                     // T++
 
         // Begin reporting
         auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
