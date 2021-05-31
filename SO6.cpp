@@ -73,17 +73,25 @@ SO6 SO6::operator*(SO6& other){
     //multiplies operators assuming COLUMN,ROW indexing
     SO6 prod;
     Z2 next;
-    for(int i=0; i<6; i++){
-        for(int j = 0; j<6; j++){
+    
+    // Compute product
+    for(int row=0; row<6; row++){
+        for(int col = 0; col<6; col++){
             for(int k = 0; k<6; k++){
-                next = arr[k][i]*other(j,k);
-                prod(j,i) += next;
+                // next = arr[row][k]*other[col][k];            // This transpose * other
+                next = arr[k][row]*other[col][k];            // This not transpose * other
+                // prod(col,row) += next;
+                prod[col][row] += next;
             }
         }
     }
     prod.fixSign();
     prod.lexOrder();
     return prod;
+}
+
+SO6 SO6::transpose() {
+    return SO6(arr);
 }
 
 void SO6::fixSign() {
@@ -152,7 +160,7 @@ std::ostream& operator<<(std::ostream& os, const SO6& m){
     for(int row = 0; row<6; row++){
         os << '[';
         for(int col = 0; col<6; col++)
-            os << m(col,row)<<' ';
+            os << m[col][row] <<' ';
         os << "] \n";
     }
     os << "\n";
