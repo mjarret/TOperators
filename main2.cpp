@@ -321,7 +321,7 @@ int main(){
     auto tbefore = chrono::high_resolution_clock::now();
     //generating list of T matrices
     //in the order Andrew wanted
-    const SO6 I = identity();
+    SO6 I = identity();
     set<SO6> ts;
     for(int i = 0; i<15; i++) {
         if(i<5)       ts.insert(tMatrix(0,i+1));
@@ -331,6 +331,31 @@ int main(){
         else          ts.insert(tMatrix(4,5));
     }
     auto tafter = chrono::high_resolution_clock::now();
+    
+
+    SO6 tmp[15];
+    for(int i = 0; i < 15; i++) {
+        if(i<5)       tmp[i] = tMatrix(0,i+1);
+        else if(i<9)  tmp[i] = tMatrix(1, i-3);
+        else if(i<12) tmp[i] = tMatrix(2, i-6);
+        else if(i<14) tmp[i] = tMatrix(3, i-8);
+        else          tmp[i] = tMatrix(4,5);
+    }
+
+
+    bool rej[15][15];
+    for(int i = 0; i < 15; i++) {
+        for(int j = 0; j <15 ; j++) {
+            rej[i][j] = false;
+            if((tmp[i]*tmp[j]) == I) rej[i][j] = true; 
+        }
+    }
+    for(int i = 0; i < 15; i++) {
+        for(int j = 0; j <15 ; j++) {
+            cout << rej[i][j] << " ";
+        }
+        cout << endl;
+    }    
     
     set<SO6> prior;            
     set<SO6> current({I});
@@ -347,7 +372,6 @@ int main(){
             for(SO6 curr : current) next.erase(curr);        // Erase everything for <=T. Experimentally determined that comparing T to only T-2 does NOT work, maybe can do even/odd and shave off a bit more time, but this seems to not really impact anything
         }
         // End main loop
-
         auto end = chrono::high_resolution_clock::now();   
         prior = current;                                    // T++
         current = next;                                     // T++
@@ -356,15 +380,15 @@ int main(){
         auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
         std::cout << ">>>Found " << next.size() << " new matrices in " << ret << "ms\n";
 
-        // Write results out
-        start = chrono::high_resolution_clock::now();
-        string fileName = "T" + to_string(i+2) + ".txt";
-        ofstream write = ofstream(fileName);
-        for(SO6 n : next) write<<n;
-        write.close();
-        end = chrono::high_resolution_clock::now();
-        ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
-        cout<<">>>Wrote T-Count "<<(i+2)<<" to 'T"<<(i+2)<<".txt' in " << ret << "ms\n";
+        // // Write results out
+        // start = chrono::high_resolution_clock::now();
+        // string fileName = "T" + to_string(i+2) + ".txt";
+        // ofstream write = ofstream(fileName);
+        // for(SO6 n : next) write<<n;
+        // write.close();
+        // end = chrono::high_resolution_clock::now();
+        // ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
+        // cout<<">>>Wrote T-Count "<<(i+2)<<" to 'T"<<(i+2)<<".txt' in " << ret << "ms\n";
     }
     chrono::duration<double> timeelapsed = chrono::high_resolution_clock::now() - tbefore;
     std::cout<< "\nTotal time elapsed: "<<chrono::duration_cast<chrono::milliseconds>(timeelapsed).count()<<"ms\n";
