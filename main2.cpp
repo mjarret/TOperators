@@ -11,7 +11,6 @@
 
 #include <algorithm>
 #include <iostream>
-#include <execution>
 #include <vector>
 #include <thread>
 #include <future>
@@ -25,6 +24,9 @@
 
 
 using namespace std;
+
+const int numThreads = 1;
+const int tCount = 4;
 
 
 SO6 identity() {
@@ -84,7 +86,7 @@ vector<vector<SO6>> mergedVect(vector<vector<SO6>>& a, vector<vector<SO6>>& b){
 }
 
 // Divides a vect of vects evenly over every LDE into numThreads vectors of vectors
-vector<vector<vector<SO6>>> divideVect(vector<vector<SO6>>& toDivide, int numThreads){
+vector<vector<vector<SO6>>> divideVect(vector<vector<SO6>>& toDivide){
     vector<vector<vector<SO6>>> toReturn(numThreads, vector<vector<SO6>>(toDivide.size()));
     int numPerThread;
     int remaining;
@@ -149,8 +151,8 @@ vector<vector<SO6>> prodHelper(vector<vector<SO6>>& batch, vector<SO6>& tmats){
 //         toReturn = mergedVect(toReturn, prod[i]);
 //     return(toReturn);
 // }
-vector<vector<SO6>> genAllProds(vector<vector<SO6>>& TminusOne, vector<SO6>& tmats, int numThreads){
-    vector<vector<vector<SO6>>> threadinput = divideVect(TminusOne, numThreads);
+vector<vector<SO6>> genAllProds(vector<vector<SO6>>& TminusOne, vector<SO6>& tmats){
+    vector<vector<vector<SO6>>> threadinput = divideVect(TminusOne);
     future<vector<vector<SO6>>> threads[numThreads];
     vector<vector<SO6>> prod[numThreads];
     for(int i = 0; i<numThreads; i++)
@@ -219,7 +221,7 @@ void pastCheckHelper(vector<SO6>& vec, vector<SO6>& past, int a, int b){
  * @param numThreads the number of parallel processes to be ran
  */
 
-void pruneAllPerms(vector<vector<SO6>>& unReduced, vector<vector<SO6>>& tMinusTwo, int numThreads){
+void pruneAllPerms(vector<vector<SO6>>& unReduced, vector<vector<SO6>>& tMinusTwo){
     /*
      * General Structure: examines each LDE separately, finds redundant matrices,
      * marks them for deletion by changing their name to "None,"
@@ -307,15 +309,6 @@ void pruneAllPerms(vector<vector<SO6>>& unReduced, vector<vector<SO6>>& tMinusTw
 //}
 
 int main(){
-
-    //Asking for number of threads and tCount to generate to
-    // Seems to slow things down, so may remove this and just hardcode it in
-    int numThreads, tCount;
-    std::cout<<"How many threads would you like to utilize? Please enter here: ";
-    cin>>numThreads;
-    std::cout<<"To what T-Count do you want to generate? Please enter here: ";
-    cin>>tCount;
-    std::cout<<"\n";
 
     //timing
     auto tbefore = chrono::high_resolution_clock::now();
