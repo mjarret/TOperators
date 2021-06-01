@@ -137,6 +137,10 @@ bool SO6::operator<(const SO6 &other) const {
     return false;
 }
 
+bool SO6::operator>(const SO6 &other) const {
+    return other < *this;
+}
+
 /** overloads == method to check equality of SO6 matrices
  *  @param other reference to SO6 to be checked against
  *  @return whether or not (*this) and other are equivalent
