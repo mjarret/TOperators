@@ -24,6 +24,7 @@ public:
     // inline float normFloat() { return norm.toFloat(); }
     void genLDE(); //generates LDE, called after multiplication and constructor
     friend std::ostream& operator<<(std::ostream&,const SO6&); //display
+    int prev;
 private:
     Z2 arr[6][6];
     // std::string name;

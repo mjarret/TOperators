@@ -46,6 +46,7 @@ SO6::SO6(){
         for(int j=0; j<6; j++)
             arr[i][j]=Z2();
     }
+    prev = -1;
 }
 
 /**
@@ -62,6 +63,7 @@ SO6::SO6(Z2 a[6][6]){
     }
     fixSign();
     lexOrder();
+    prev = -1;
 }
 
 /**
@@ -143,7 +145,7 @@ bool SO6::operator==(SO6 &other) {
     // SO6 are the same if they have the same triangle
     // TODO: lower right triangle seems super fast, but can try out others                
     for(int col = 5; col>-1 ; col--) {                                
-        for(int row = 5; row>5-col-1; row--) {      
+        for(int row = 5; row>-1; row--) {      
             if(arr[col][row]!=other[col][row]) return false;
         }
     }
