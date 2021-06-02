@@ -17,6 +17,8 @@
 #include <fstream>
 #include <chrono>
 #include <set>
+#include <string>
+#include <sstream>
 #include <stdlib.h>
 #include <omp.h>
 #include "Z2.hpp"
@@ -214,6 +216,30 @@ void pastCheckHelper(vector<SO6>& vec, vector<SO6>& past, int a, int b){
     }
 }
 
+set<SO6> fileRead(int tc, vector<SO6> tbase) {
+    ifstream tfile;
+    tfile.open(("T" + to_string(tc) + ".txt").c_str());
+    if(!tfile) {
+        cout << "File does not exist.\n";
+        exit(1);
+    }
+    set<SO6> tset;
+    string hist;
+    string mat;
+    int i = 0;
+    while(getline(tfile, hist)) {
+        stringstream s(hist);
+        getline(s, mat, ' ');
+        SO6 m = tbase[stoi(mat)];
+        while(getline(s, mat, ' ')) {
+            m = m*tbase[stoi(mat)];
+        }
+        tset.insert(m);
+        cout << tset.size() << '\n';
+    }
+    return tset;
+}
+
 // bool isNone(SO6& toCheck){
 //     return(toCheck.getName()=="None");
 // }
@@ -328,12 +354,34 @@ int main(){
         else          ts.insert(tMatrix(4,5,i));
     }
     auto tafter = chrono::high_resolution_clock::now();
+
+
     
     set<SO6> prior;            
     set<SO6> current({I});
     set<SO6> next;
+    int start = 0;
 
-    for(int i = 0; i<tCount; i++){
+    if(readIn && tCount > 2) {
+        vector<SO6> tsv; //t count 1 matrices
+        for(int i = 0; i<15; i++){
+            if(i<5)
+                tsv.push_back(tMatrix(0,i+1,i));
+            else if(i<9)
+                tsv.push_back(tMatrix(1, i-3,i));
+            else if(i<12)
+                tsv.push_back(tMatrix(2, i-6,i));
+            else if(i<14)
+                tsv.push_back(tMatrix(3, i-8,i));
+            else
+                tsv.push_back(tMatrix(4,5,i));
+        }
+        prior = fileRead(tCount-2, tsv);
+        current = fileRead(tCount-1, tsv);
+        start = tCount - 1;
+    }
+
+    for(int i = start; i<tCount; i++){
         std::cout<<"\nBeginning T-Count "<<(i+1)<<"\n";
         auto start = chrono::high_resolution_clock::now();
         next.clear();
