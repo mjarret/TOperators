@@ -177,12 +177,12 @@ std::ostream& operator<<(std::ostream& os, const SO6& m){
         os << i << " ";
     }
     os << "\n";
-    for(int row = 0; row<6; row++){
+/*     for(int row = 0; row<6; row++){
         os << '[';
         for(int col = 0; col<6; col++)
             os << m[col][row] <<' ';
         os << "] \n";
     }
-    os << "\n";
+    os << "\n"; */
     return os;
 }
