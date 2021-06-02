@@ -46,6 +46,7 @@ SO6::SO6(){
         for(int j=0; j<6; j++)
             arr[i][j]=Z2();
     }
+    hist = {};
 }
 
 /**
@@ -53,7 +54,7 @@ SO6::SO6(){
  * @param a array of Z2 that the SO6 will take as values
  * @param n the name of the object
  */
-SO6::SO6(Z2 a[6][6]){
+SO6::SO6(Z2 a[6][6], std::vector<int> t){
     // initializes SO6's entries according to a
     for(int col = 0; col<6; col++){
         for(int row = 0; row<6; row++) {
@@ -62,6 +63,7 @@ SO6::SO6(Z2 a[6][6]){
     }
     fixSign();
     lexOrder();
+    hist = t;
 }
 
 /**
@@ -87,11 +89,13 @@ SO6 SO6::operator*(SO6& other){
     }
     prod.fixSign();
     prod.lexOrder();
+    prod.hist = hist;
+    prod.hist.insert(prod.hist.end(), other.hist.begin(), other.hist.end());
     return prod;
 }
 
 SO6 SO6::transpose() {
-    return SO6(arr);
+    return SO6(arr, hist);
 }
 
 void SO6::fixSign() {
@@ -157,6 +161,10 @@ bool SO6::operator==(SO6 &other) {
  * @returns reference ostream with the matrix's display form appended
  */
 std::ostream& operator<<(std::ostream& os, const SO6& m){
+    for (int i : m.hist) {
+        os << i << " ";
+    }
+    os << "\n";
     for(int row = 0; row<6; row++){
         os << '[';
         for(int col = 0; col<6; col++)
@@ -166,5 +174,3 @@ std::ostream& operator<<(std::ostream& os, const SO6& m){
     os << "\n";
     return os;
 }
-
-

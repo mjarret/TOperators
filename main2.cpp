@@ -6,7 +6,7 @@
  * @author Andrew Glaudell
  * @author Jacob Weston
  * @author Mingzhen Tian
- * @version 5/20/21
+ * @version 6/1/21
  */
 
 #include <algorithm>
@@ -27,6 +27,9 @@ using namespace std;
 
 const int numThreads = 1;
 const int tCount = 4;
+
+//Turn this on if you want to read in saved data
+const bool readIn = false;
 
 
 SO6 identity() {

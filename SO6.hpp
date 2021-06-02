@@ -4,7 +4,7 @@ public:
     SO6();
     // SO6(std::string); //initializes zero matrix
     // SO6(Z2[6][6], std::string); //initializes matrix according to a 6x6 array of Z2
-    SO6(Z2[6][6]); //initializes matrix according to a 6x6 array of Z2
+    SO6(Z2[6][6], std::vector<int> t); //initializes matrix according to a 6x6 array of Z2
     SO6 operator*(SO6&); //mutliplication
     void fixSign();
     void lexOrder();
@@ -26,6 +26,7 @@ public:
     friend std::ostream& operator<<(std::ostream&,const SO6&); //display
 private:
     Z2 arr[6][6];
+    std::vector<int> hist;
     // std::string name;
     // Z2 norm;
     // int LDE;
