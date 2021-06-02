@@ -44,11 +44,12 @@ SO6 identity() {
  * Returns the SO6 object corresponding to T[i+1, j+1]
  * @param i the first index to determine the T matrix
  * @param j the second index to determine the T matrix
+ * @param matNum the index of the SO6 object in the base vector
  * @return T[i+1,j+1]
  */
-SO6 tMatrix(int i, int j){
+SO6 tMatrix(int i, int j, int matNum){
     // Generates the T Matrix T[i+1, j+1]
-    SO6 t;
+    SO6 t({matNum});
     int sign;
     if((i+1==j&&i<=4&&i>=0)||(j+1==i&&j<=4&&j>=0))
         sign = 1;
@@ -320,11 +321,11 @@ int main(){
     SO6 I = identity();
     set<SO6> ts;
     for(int i = 0; i<15; i++) {
-        if(i<5)       ts.insert(tMatrix(0,i+1));
-        else if(i<9)  ts.insert(tMatrix(1, i-3));
-        else if(i<12) ts.insert(tMatrix(2, i-6));
-        else if(i<14) ts.insert(tMatrix(3, i-8));
-        else          ts.insert(tMatrix(4,5));
+        if(i<5)       ts.insert(tMatrix(0,i+1,i));
+        else if(i<9)  ts.insert(tMatrix(1, i-3,i));
+        else if(i<12) ts.insert(tMatrix(2, i-6,i));
+        else if(i<14) ts.insert(tMatrix(3, i-8,i));
+        else          ts.insert(tMatrix(4,5,i));
     }
     auto tafter = chrono::high_resolution_clock::now();
     

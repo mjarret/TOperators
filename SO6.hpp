@@ -4,6 +4,7 @@ public:
     SO6();
     // SO6(std::string); //initializes zero matrix
     // SO6(Z2[6][6], std::string); //initializes matrix according to a 6x6 array of Z2
+    SO6(std::vector<int> t);
     SO6(Z2[6][6], std::vector<int> t); //initializes matrix according to a 6x6 array of Z2
     SO6 operator*(SO6&); //mutliplication
     void fixSign();

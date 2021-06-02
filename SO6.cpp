@@ -51,8 +51,20 @@ SO6::SO6(){
 
 /**
  * Constructor that initializes arbitrary matrix with arbitrary name
+ * @param t the object history
+ */
+SO6::SO6(std::vector<int> t){
+    for(int i=0; i<6; i++){
+        for(int j=0; j<6; j++)
+            arr[i][j]=Z2();
+    }
+    hist = t;
+}
+
+/**
+ * Constructor that initializes arbitrary matrix with arbitrary name
  * @param a array of Z2 that the SO6 will take as values
- * @param n the name of the object
+ * @param t the object history
  */
 SO6::SO6(Z2 a[6][6], std::vector<int> t){
     // initializes SO6's entries according to a
