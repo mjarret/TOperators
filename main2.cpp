@@ -124,9 +124,9 @@ int main(){
         prior = current;                                    // T++
         current = next;                                     // T++
 
-        // // Begin reporting
-        // auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
-        // std::cout << ">>>Found " << next.size() << " new matrices in " << ret << "ms\n";
+        // Begin reporting
+        auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
+        std::cout << ">>>Found " << next.size() << " new matrices in " << ret << "ms\n";
 
         // vector<int> tmp;
         // for(int n = 0; n < 5; n++) 
