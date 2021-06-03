@@ -19,6 +19,7 @@
 #include <set>
 #include <string>
 #include <sstream>
+#include <functional>
 #include <stdlib.h>
 #include <omp.h>
 #include "Z2.hpp"
@@ -28,10 +29,15 @@
 using namespace std;
 
 const int numThreads = 1;
-const int tCount = 5;
+const int tCount = 6;
 
 //Turn this on if you want to read in saved data
-const bool readIn = true;
+const bool tIO = true;
+//If tIO true, choose which tCount to begin generating from:
+const int genFrom = tCount;
+
+//Saves every saveInterval iterations
+const int saveInterval = 50000;
 
 
 SO6 identity() {
@@ -226,6 +232,8 @@ set<SO6> fileRead(int tc, vector<SO6> tbase) {
     set<SO6> tset;
     string hist;
     string mat;
+    //First line contains data for which iteration to start from, so skip it
+    getline(tfile, hist);
     while(getline(tfile, hist)) {
         stringstream s(hist);
         vector<int> tmp;
@@ -239,6 +247,18 @@ set<SO6> fileRead(int tc, vector<SO6> tbase) {
         tset.insert(m);
     }
     return tset;
+}
+
+void writeResults(int i, int tsCount, int currentCount, set<SO6> next) {
+    auto start = chrono::high_resolution_clock::now();
+    string fileName = "T" + to_string(i+1) + ".txt";
+    ofstream write = ofstream(fileName);
+    write << tsCount << ' ' << currentCount << '\n';
+    for(SO6 n : next) write<<n;
+    write.close();
+    auto end = chrono::high_resolution_clock::now();
+    auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
+    cout<<">>>Wrote T-Count "<<(i+1)<<" to 'T"<<(i+1)<<".txt' in " << ret << "ms\n";
 }
 
 // bool isNone(SO6& toCheck){
@@ -363,33 +383,87 @@ int main(){
     set<SO6> next;
     int start = 0;
 
-    if(readIn && tCount > 2) {
-        vector<SO6> tsv; //t count 1 matrices
-        for(int i = 0; i<15; i++){
-            if(i<5)
-                tsv.push_back(tMatrix(0,i+1,i));
-            else if(i<9)
-                tsv.push_back(tMatrix(1, i-3,i));
-            else if(i<12)
-                tsv.push_back(tMatrix(2, i-6,i));
-            else if(i<14)
-                tsv.push_back(tMatrix(3, i-8,i));
-            else
-                tsv.push_back(tMatrix(4,5,i));
-        }
-        prior = fileRead(tCount-2, tsv);
-        current = fileRead(tCount-1, tsv);
-        start = tCount - 1;
+    
+    vector<SO6> tsv; //t count 1 matrices
+    for(int i = 0; i<15; i++){
+        if(i<5)
+            tsv.push_back(tMatrix(0,i+1,i));
+        else if(i<9)
+            tsv.push_back(tMatrix(1, i-3,i));
+        else if(i<12)
+            tsv.push_back(tMatrix(2, i-6,i));
+        else if(i<14)
+            tsv.push_back(tMatrix(3, i-8,i));
+        else
+            tsv.push_back(tMatrix(4,5,i));
     }
 
-    for(int i = start; i<tCount; i++){
+    if(tIO && tCount > 2) {
+        prior = fileRead(genFrom-3, tsv);
+        current = fileRead(genFrom-2, tsv);
+    }
+
+    for(int i = genFrom - 1; i<tCount; i++){
         std::cout<<"\nBeginning T-Count "<<(i+1)<<"\n";
         auto start = chrono::high_resolution_clock::now();
         next.clear();
         // Main loop here
-        for(SO6 t : ts) {
-            for(SO6 curr : current) next.insert(t*curr);     // New product list for T + 1 stored as next
-            for(SO6 p : prior) next.erase(p);                // Erase T-1
+        ifstream tfile;
+        int tsCount = 0;
+        int currentCount = 0;
+        int save = 0;
+        tfile.open(("T" + to_string(i + 1) + ".txt").c_str());
+        if (!tIO || !tfile) {
+            if (tfile) {
+                tfile.close();
+            }
+            for(SO6 t : ts) {
+                for(SO6 curr : current) {
+                    next.insert(t*curr);     // New product list for T + 1 stored as next
+                    save++;
+                    currentCount++;
+                    if(save % saveInterval == 0) {
+                        writeResults(i, tsCount, currentCount, next);
+                    }
+                }
+                for(SO6 p : prior) next.erase(p);                // Erase T-1
+                tsCount++;
+                currentCount = 0;
+            }
+        }
+        else {
+            next = fileRead(i+1, tsv);
+            std::set<SO6>::iterator titr = ts.begin();
+            std::set<SO6>::iterator citr = current.begin();
+            string str;
+            getline(tfile, str);
+            stringstream s(str);
+            getline(s, str, ' ');
+            tsCount = stoi(str);
+            getline(s, str, ' ');
+            currentCount = stoi(str);
+            tfile.close();
+            advance(titr, tsCount);
+            advance(citr, currentCount);
+            SO6 t, curr;
+            while (titr != ts.end()) {
+                t = *titr;
+                while (citr != current.end()) {
+                    curr = *citr;
+                    next.insert(t*curr);
+                    save++;
+                    citr++;
+                    currentCount++;
+                    if(save % saveInterval == 0) {
+                        writeResults(i, tsCount, currentCount, next);
+                    }
+                }
+                for(SO6 p : prior) next.erase(p);
+                titr++;
+                tsCount++;
+                currentCount = 0;
+                citr = current.begin();
+            }
         }
         // End main loop
         auto end = chrono::high_resolution_clock::now();   
@@ -401,14 +475,7 @@ int main(){
         std::cout << ">>>Found " << next.size() << " new matrices in " << ret << "ms\n";
 
         // Write results out
-        start = chrono::high_resolution_clock::now();
-        string fileName = "T" + to_string(i+1) + ".txt";
-        ofstream write = ofstream(fileName);
-        for(SO6 n : next) write<<n;
-        write.close();
-        end = chrono::high_resolution_clock::now();
-        ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
-        cout<<">>>Wrote T-Count "<<(i+1)<<" to 'T"<<(i+1)<<".txt' in " << ret << "ms\n";
+        writeResults(i, tsCount, currentCount, next);
     }
     chrono::duration<double> timeelapsed = chrono::high_resolution_clock::now() - tbefore;
     std::cout<< "\nTotal time elapsed: "<<chrono::duration_cast<chrono::milliseconds>(timeelapsed).count()<<"ms\n";
