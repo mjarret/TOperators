@@ -401,9 +401,10 @@ int main(){
     if(tIO && tCount > 2) {
         prior = fileRead(genFrom-3, tsv);
         current = fileRead(genFrom-2, tsv);
+        start = genFrom - 1;
     }
 
-    for(int i = genFrom - 1; i<tCount; i++){
+    for(int i = start; i<tCount; i++){
         std::cout<<"\nBeginning T-Count "<<(i+1)<<"\n";
         auto start = chrono::high_resolution_clock::now();
         next.clear();
