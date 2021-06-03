@@ -29,7 +29,7 @@
 using namespace std;
 
 const int numThreads = 1;
-const int tCount = 6;
+const int tCount = 5;
 
 //Turn this on if you want to read in saved data
 const bool tIO = true;
@@ -399,8 +399,8 @@ int main(){
     }
 
     if(tIO && tCount > 2) {
-        prior = fileRead(genFrom-3, tsv);
-        current = fileRead(genFrom-2, tsv);
+        prior = fileRead(genFrom-2, tsv);
+        current = fileRead(genFrom-1, tsv);
         start = genFrom - 1;
     }
 
