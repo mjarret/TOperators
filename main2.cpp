@@ -28,10 +28,10 @@
 using namespace std;
 
 const int numThreads = 1;
-const int tCount = 4;
+const int tCount = 5;
 
 //Turn this on if you want to read in saved data
-const bool readIn = false;
+const bool readIn = true;
 
 
 SO6 identity() {
@@ -226,16 +226,17 @@ set<SO6> fileRead(int tc, vector<SO6> tbase) {
     set<SO6> tset;
     string hist;
     string mat;
-    int i = 0;
     while(getline(tfile, hist)) {
         stringstream s(hist);
-        getline(s, mat, ' ');
-        SO6 m = tbase[stoi(mat)];
+        vector<int> tmp;
         while(getline(s, mat, ' ')) {
-            m = m*tbase[stoi(mat)];
+            tmp.push_back(stoi(mat));
+        }
+        SO6 m = tbase.at(tmp.at(tmp.size() - 1));
+        for(int k = tmp.size()-2; k > -1; k--) {
+            m = tbase.at(tmp.at(k))*m;
         }
         tset.insert(m);
-        cout << tset.size() << '\n';
     }
     return tset;
 }
