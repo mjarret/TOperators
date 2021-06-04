@@ -251,11 +251,12 @@ set<SO6> fileRead(int tc, vector<SO6> tbase) {
 
 void writeResults(int i, int tsCount, int currentCount, set<SO6> next) {
     auto start = chrono::high_resolution_clock::now();
-    string fileName = "T" + to_string(i+1) + ".txt";
+    string fileName = "T" + to_string(i+1) + ".tmp";
     ofstream write = ofstream(fileName);
     write << tsCount << ' ' << currentCount << '\n';
     for(SO6 n : next) write<<n;
     write.close();
+    std::rename(("T" + to_string(i+1) + ".tmp").c_str(), ("T" + to_string(i+1) + ".txt").c_str());
     auto end = chrono::high_resolution_clock::now();
     auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
     cout<<">>>Wrote T-Count "<<(i+1)<<" to 'T"<<(i+1)<<".txt' in " << ret << "ms\n";
