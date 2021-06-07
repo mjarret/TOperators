@@ -32,12 +32,12 @@ const int numThreads = 1;
 const int tCount = 5;
 
 //Turn this on if you want to read in saved data
-const bool tIO = true;
+const bool tIO = false;
 //If tIO true, choose which tCount to begin generating from:
-const int genFrom = tCount;
+const int genFrom = 6;
 
 //Saves every saveInterval iterations
-const int saveInterval = 50000;
+const int saveInterval = 1000000;
 
 
 SO6 identity() {
@@ -230,21 +230,24 @@ set<SO6> fileRead(int tc, vector<SO6> tbase) {
         exit(1);
     }
     set<SO6> tset;
-    string hist;
-    string mat;
+    char hist;
+    string mat; //Now unused except as a buffer
+    long i = 0;
+    vector<int> tmp;
+    SO6 m;
     //First line contains data for which iteration to start from, so skip it
-    getline(tfile, hist);
-    while(getline(tfile, hist)) {
-        stringstream s(hist);
-        vector<int> tmp;
-        while(getline(s, mat, ' ')) {
-            tmp.push_back(stoi(mat));
+    getline(tfile, mat);
+    while(tfile.get(hist)) {
+        //Convert hex character to integer
+        tmp.push_back((hist >= 'a') ? (hist - 'a' + 10) : (hist - '0'));
+        if (++i%tc == 0) {
+            m = tbase.at(tmp.at(tmp.size() - 1));
+            for(int k = tmp.size()-2; k > -1; k--) {
+                m = tbase.at(tmp.at(k))*m;
+            }
+            tset.insert(m);
+            tmp.clear();
         }
-        SO6 m = tbase.at(tmp.at(tmp.size() - 1));
-        for(int k = tmp.size()-2; k > -1; k--) {
-            m = tbase.at(tmp.at(k))*m;
-        }
-        tset.insert(m);
     }
     return tset;
 }

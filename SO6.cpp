@@ -2,6 +2,8 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <sstream>
+#include <bitset>
 #include <iterator>
 #include "Z2.hpp"
 #include "SO6.hpp"
@@ -174,9 +176,9 @@ bool SO6::operator==(SO6 &other) {
  */
 std::ostream& operator<<(std::ostream& os, const SO6& m){
     for (int i : m.hist) {
-        os << i << " ";
+        os << std::hex << i;//<< " ";
     }
-    os << "\n";
+    //os << "\n";
 /*     for(int row = 0; row<6; row++){
         os << '[';
         for(int col = 0; col<6; col++)
