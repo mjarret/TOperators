@@ -166,6 +166,17 @@ bool SO6::operator==(SO6 &other) {
     return true;
 }
 
+bool SO6::operator==(const SO6 &other) const {
+    // SO6 are the same if they have the same triangle
+    // TODO: lower right triangle seems super fast, but can try out others                
+    for(int col = 5; col>-1 ; col--) {                                
+        for(int row = 5; row>5-col-1; row--) {      
+            if(arr[col][row]<other[col][row] || other[col][row]<arr[col][row]) return false;
+        }
+    }
+    return true;
+}
+
 /**
  * Overloads << function for SO6.
  * @param os reference to ostream object needed to implement <<

@@ -28,7 +28,7 @@
 using namespace std;
 
 const int numThreads = 1;
-const int tCount = 4;
+const int tCount = 5;
 
 //Turn this on if you want to read in saved data
 const bool readIn = false;
@@ -157,20 +157,20 @@ vector<vector<SO6>> prodHelper(vector<vector<SO6>>& batch, vector<SO6>& tmats){
 //         toReturn = mergedVect(toReturn, prod[i]);
 //     return(toReturn);
 // }
-vector<vector<SO6>> genAllProds(vector<vector<SO6>>& TminusOne, vector<SO6>& tmats){
-    vector<vector<vector<SO6>>> threadinput = divideVect(TminusOne);
-    future<vector<vector<SO6>>> threads[numThreads];
-    vector<vector<SO6>> prod[numThreads];
-    for(int i = 0; i<numThreads; i++)
-        threads[i] = async(launch::async, prodHelper, ref(threadinput[i]), ref(tmats));
-    for(int i = 0; i<numThreads; i++){
-        prod[i] = threads[i].get();
-    }
-    vector<vector<SO6>> toReturn(prod[0].size());
-    for(int i = 0; i<numThreads; i++)
-        toReturn = mergedVect(toReturn, prod[i]);
-    return(toReturn);
-}
+// vector<vector<SO6>> genAllProds(vector<vector<SO6>>& TminusOne, vector<SO6>& tmats){
+//     vector<vector<vector<SO6>>> threadinput = divideVect(TminusOne);
+//     future<vector<vector<SO6>>> threads[numThreads];
+//     vector<vector<SO6>> prod[numThreads];
+//     for(int i = 0; i<numThreads; i++)
+//         threads[i] = async(launch::async, prodHelper, ref(threadinput[i]), ref(tmats));
+//     for(int i = 0; i<numThreads; i++){
+//         prod[i] = threads[i].get();
+//     }
+//     vector<vector<SO6>> toReturn(prod[0].size());
+//     for(int i = 0; i<numThreads; i++)
+//         toReturn = mergedVect(toReturn, prod[i]);
+//     return(toReturn);
+// }
 
 
 //int getLength(vector<vector<SO6>>& input){
@@ -226,16 +226,19 @@ set<SO6> fileRead(int tc, vector<SO6> tbase) {
     set<SO6> tset;
     string hist;
     string mat;
-    int i = 0;
+    // int i = 0;
     while(getline(tfile, hist)) {
         stringstream s(hist);
-        getline(s, mat, ' ');
-        SO6 m = tbase[stoi(mat)];
+        // getline(s, mat, ' ');
+        vector<int> tmp;
+        SO6 m = identity();
         while(getline(s, mat, ' ')) {
-            m = m*tbase[stoi(mat)];
+            tmp.push_back(stoi(mat));
+        }
+        for(int k = tmp.size()-1; k > -1; k--) {
+            m = tbase.at(tmp.at(k))*m;
         }
         tset.insert(m);
-        cout << tset.size() << '\n';
     }
     return tset;
 }
@@ -270,22 +273,22 @@ void pruneAllPerms(vector<vector<SO6>>& unReduced, vector<vector<SO6>>& tMinusTw
         for(int j = 0; j < tMinusTwo.size(); j++) {
             unReduced[i].insert(unReduced[i].end(), tMinusTwo[j].begin(), tMinusTwo[j].end());
         }
-        
+
         auto durr = chrono::high_resolution_clock::now();
         std::sort(unReduced[i].begin(),unReduced[i].end());
         auto ret1 = chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now()-durr).count();
-        
+
         durr = chrono::high_resolution_clock::now();
-        unReduced[i].erase(unique(unReduced[i].begin(),unReduced[i].end()),unReduced[i].end());    
+        unReduced[i].erase(unique(unReduced[i].begin(),unReduced[i].end()),unReduced[i].end());
         auto ret2 = chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now()-durr).count();
         std::cout << "\tunReduced[" << i << "]: " "Sort/Erase duplicates took: " << ret1 << "/" << ret2 << "ms\n";
     }
     // for(int i = 0; i<unReduced.size();i++) {
-    //     set<SO6> s; 
-    //     unsigned size = unReduced[i].size(); 
+    //     set<SO6> s;
+    //     unsigned size = unReduced[i].size();
     //     for(unsigned j = 0; j <size; j++) s.insert((unReduced[i])[j]);
     //     unReduced[i].assign(s.begin(),s.end());
-    // }    
+    // }
     // // Past-Checking
     // //iterating over every relevant LDE
     // for(int i = 0; i<tMinusTwo.size(); i++){
@@ -356,14 +359,13 @@ int main(){
     auto tafter = chrono::high_resolution_clock::now();
 
 
-    
-    set<SO6> prior;            
+    set<SO6> prior;
     set<SO6> current({I});
     set<SO6> next;
     int start = 0;
 
-    if(readIn && tCount > 2) {
-        vector<SO6> tsv; //t count 1 matrices
+    vector<SO6> tsv; //t count 1 matrices
+    // if(readIn && tCount > 2) {
         for(int i = 0; i<15; i++){
             if(i<5)
                 tsv.push_back(tMatrix(0,i+1,i));
@@ -376,22 +378,19 @@ int main(){
             else
                 tsv.push_back(tMatrix(4,5,i));
         }
-        prior = fileRead(tCount-2, tsv);
-        current = fileRead(tCount-1, tsv);
-        start = tCount - 1;
-    }
+    // }
 
-    for(int i = start; i<tCount; i++){
+    for(int i = 0; i<tCount; i++){
         std::cout<<"\nBeginning T-Count "<<(i+1)<<"\n";
         auto start = chrono::high_resolution_clock::now();
         next.clear();
         // Main loop here
-        for(SO6 t : ts) {
-            for(SO6 curr : current) next.insert(t*curr);     // New product list for T + 1 stored as next
+        for(int j = 0; j < 15; j++) {
+            for(SO6 curr : current) next.insert(tsv.at(j)*curr);     // New product list for T + 1 stored as next
             for(SO6 p : prior) next.erase(p);                // Erase T-1
         }
         // End main loop
-        auto end = chrono::high_resolution_clock::now();   
+        auto end = chrono::high_resolution_clock::now();
         prior = current;                                    // T++
         current = next;                                     // T++
 
@@ -405,6 +404,8 @@ int main(){
         ofstream write = ofstream(fileName);
         for(SO6 n : next) write<<n;
         write.close();
+        set<SO6> bla = fileRead(i+1, tsv);
+        cout << (next == bla) << endl;
         end = chrono::high_resolution_clock::now();
         ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
         cout<<">>>Wrote T-Count "<<(i+1)<<" to 'T"<<(i+1)<<".txt' in " << ret << "ms\n";
