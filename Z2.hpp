@@ -37,7 +37,7 @@ public:
     Z2 abs(); //Returns the absolute value
     //friend std::ostream& operator<<(std::ostream&,const Z2&); //display
     // float toFloat(); //Returns the Z2 object as a float
-    int8_t getLDE() {return ((val[0]+1)%2)-(val[2]<<1);}; // gives the denominator exponent in base sqrt(2). Note that this is a positive number when val[2] is negative!
+    int8_t getLDE() {return ((-val[2])<<1) - ((val[0]+1)%2);}; // gives the denominator exponent in base sqrt(2). Note that this is a positive number when val[2] is negative!
     void negate(){val[0]=-val[0];val[1]=-val[1];}
 private:
     int8_t val[3]; //values of the Z2
