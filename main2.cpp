@@ -34,7 +34,7 @@ const int8_t tCount = 6;
 const Z2 inverse_root2 = Z2::inverse_root2();
 
 //Turn on to save data
-const bool saveResults = false;
+const bool saveResults = true;
 
 //Turn this on if you want to read in saved data
 const bool tIO = false;
@@ -159,23 +159,21 @@ int main(){
         ifstream tfile;
         tfile.open(("data/T" + to_string(i + 1) + ".txt").c_str());
 
-        int8_t tsCount = 0;
         int currentCount = 0;
-        int save = 0;
         if (!tIO || !tfile) {
             if (tfile) tfile.close();
 
             for(SO6 t : tsv) {
                 for(SO6 curr : current) {
-                    if(reject[t.getLast()][curr.getLast()] && curr.getLast()!=-1) continue;
                     next.insert(t*curr);     // New product list for T + 1 stored as next
                     currentCount++;
-                    if(!(next.size() % saveInterval)) writeResults(i, tsCount, currentCount, next); //I think the way this works out currentCount is always the change in next.size()...
+                    if(!(next.size() % saveInterval)) writeResults(i, t.getLast(), currentCount, next);
                 }
-                tsCount++;
                 currentCount = 0;
             }
             for(SO6 p : prior) next.erase(p); // Erase T-1
+            // Write results out
+            writeResults(i, tsv.size(), currentCount, next); // This always finishes at tsv.size()
         }
         else {
             next = fileRead(i+1, tsv);
@@ -183,7 +181,7 @@ int main(){
             getline(tfile, str);
             stringstream s(str);
             getline(s, str, ' ');
-            tsCount = stoi(str);
+            int8_t tsCount = stoi(str);
             getline(s, str, ' ');
             currentCount = stoi(str);
             tfile.close();
@@ -212,18 +210,16 @@ int main(){
                 currentCount = 0;
                 citr = current.begin();
             }
+            writeResults(i, tsv.size(), currentCount, next); // This always finishes at tsv.size()
         }
         // End main loop
         auto end = chrono::high_resolution_clock::now();
-        prior = current;                                    // T++
-        current = next;                                     // T++
+        prior.swap(current);                                    // T++
+        current.swap(next);                                     // T++
 
         // Begin reporting
         auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
         std::cout << ">>>Found " << next.size() << " new matrices in " << ret << "ms\n";
-
-        // Write results out
-        writeResults(i, tsCount, currentCount, next);
     }
     chrono::duration<double> timeelapsed = chrono::high_resolution_clock::now() - tbefore;
     std::cout<< "\nTotal time elapsed: "<<chrono::duration_cast<chrono::milliseconds>(timeelapsed).count()<<"ms\n";
