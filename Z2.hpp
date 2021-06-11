@@ -39,6 +39,8 @@ public:
     // float toFloat(); //Returns the Z2 object as a float
     int8_t getLDE() {return ((-val[2])<<1) - ((val[0]+1)%2);}; // gives the denominator exponent in base sqrt(2). Note that this is a positive number when val[2] is negative!
     void negate(){val[0]=-val[0];val[1]=-val[1];}
+    static const Z2 inverse_root2() {return Z2(0,1,1); }
+    static const Z2 one() {return Z2(1,0,0);}
 private:
     int8_t val[3]; //values of the Z2
 };

@@ -18,8 +18,7 @@
  */
 bool lexLess (Z2 first[6],Z2 second[6]) {
     for(int8_t i = 0; i < 6 ; i++) {
-        if(first[i] < second[i]) return true;
-        if(second[i] < first[i]) return false;
+        if(first[i] != second[i]) return first[i] < second[i];
     }
     return false;
 }
@@ -119,7 +118,7 @@ void SO6::fixSign() {
             if(arr[col][row] < 0) {
                 while(row<6) arr[col][row++] = -arr[col][row];
             }
-            else if(arr[col][row] == Z2(0,0,0)) continue;
+            else if(arr[col][row] == Z2()) continue;
             break;
         }
     }

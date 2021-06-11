@@ -31,6 +31,8 @@ using namespace std;
 
 const int8_t numThreads = 1;
 const int8_t tCount = 6;
+const Z2 inverse_root2 = Z2::inverse_root2();
+const Z2 one = Z2::one();
 
 //Turn this on if you want to read in saved data
 const bool tIO = false;
@@ -44,8 +46,9 @@ const int saveInterval = 1000000;
 SO6 identity() {
     SO6 I;
     for(int8_t k =0; k<6; k++) {
-        I(k,5-k) = Z2(1,0,0);
+        I(k,k) = one;
     }
+    I.lexOrder();
     return I;
 }
 
@@ -58,23 +61,13 @@ SO6 identity() {
  */
 SO6 tMatrix(int8_t i, int8_t j, int8_t matNum){
     // Generates the T Matrix T[i+1, j+1]
-    SO6 t({matNum});
-    int sign;
-    if((i+1==j&&i<=4&&i>=0)||(j+1==i&&j<=4&&j>=0))
-        sign = 1;
-    else
-        sign = -1;
-    for(int8_t k=0; k<6; k++){
-        t(k,k) = Z2(1,0,0);
-    }
-    t(i,i) = Z2(0,1,1);
-    // t(i,i) = Z2(1,0,1);
-    t(i,j) = Z2(0,-sign, 1);
-    // t(i,j) = Z2(-sign,0,1);
-    t(j,i) = Z2(0, sign, 1);
-    // t(j,i) = Z2(sign,0,1);
-    t(j,j) = Z2(0,1,1);
-    // t(j,j) = Z2(1,0,1);
+    SO6 t;                                 
+    for(int8_t k = 0; k < 6; k++) t[k][k] = one;          // Initialize to the identity matrix
+    t[i][i] = inverse_root2;                              // Change the i,j cycle to appropriate 1/sqrt(2)
+    t[j][j] = inverse_root2;
+    t[i][j] = inverse_root2;
+    if(abs(i-j)!=1) t[i][j].negate();   
+    t[j][i] = -t[i][j];
     t.fixSign();
     t.lexOrder();
     return(t);
@@ -383,7 +376,6 @@ int main(){
         else if(i<14) ts.insert(tMatrix(3, i-8,i));
         else          ts.insert(tMatrix(4,5,i));
     }
-    auto tafter = chrono::high_resolution_clock::now();
 
 
     set<SO6> prior;
