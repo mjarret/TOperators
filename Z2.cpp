@@ -164,9 +164,6 @@ bool Z2::operator<(Z2& other){
     if(a2 < b2) return true;                                        // a>0, b<0, and a^2 < 2b^2 implies that a + sqrt(2) b < 0
     return false;                                                   // a>0, b<0, and a^2 >= 2b^2 implies that a+sqrt(2)b >= 0
 }
-bool Z2::operator>(Z2& other)  {return other < *this;}
-bool Z2::operator>=(Z2& other) {return !(*this < other);}
-bool Z2::operator<=(Z2& other) {return !(*this > other);}
 
 /**
  * Overloads the < operator for Z2
@@ -175,23 +172,27 @@ bool Z2::operator<=(Z2& other) {return !(*this > other);}
  */
 const bool Z2::operator<(const Z2& other) const{
     int8_t k = std::max(val[2],other[2]);
-    int8_t a = val[0] << ((k-val[2])/2);
-    int8_t b = val[1] << ((k-val[2])/2);
-    a = a - (other[0] << ((k-other[2]))/2);
-    b = b - (other[1] << ((k-other[2]))/2);
+    int8_t a = val[0] << (k-val[2]);
+    int8_t b = val[1] << (k-val[2]);
+    a -= other[0] << (k-other[2]);
+    b -= other[1] << (k-other[2]);
     if(a < 0) {                                    
-        if(b <= 0) return true;                           // a<0 and b<=0 means that diff < 0
-        a*=a;                  // compute a^2    
-        b = (b*b) << 1;           // compute 2b^2
-        if(a > b) return true;                                    // a<0, b>0, and a^2 > 2 b^2 implies that a+sqrt(2)b <0
-        return false;                                               // a<0, b>0, and a^2 <= 2 b^2 implies that a+sqrt(2)b >= 0
+        if(b <= 0) return true;                             // a<0 and b<=0 means that diff < 0
+        a*=a;                                               // compute a^2    
+        b = (b*b) << 1;                                     // compute 2b^2
+        if(a > b) return true;                              // a<0, b>0, and a^2 > 2 b^2 implies that a+sqrt(2)b <0
+        return false;                                       // a<0, b>0, and a^2 <= 2 b^2 implies that a+sqrt(2)b >= 0
     }
-    if(b >= 0) return false;                              // a>=0 and b>=0 means that diff >=0
-    a*=a;                      // compute a^2    
-    b = (b*b) << 1;               // compute 2b^2
-    if(a < b) return true;                                        // a>0, b<0, and a^2 < 2b^2 implies that a + sqrt(2) b < 0
-    return false;                                                   // a>0, b<0, and a^2 >= 2b^2 implies that a+sqrt(2)b >= 0
+    if(b >= 0) return false;                                // a>=0 and b>=0 means that diff >=0
+    a*=a;                                                   // compute a^2    
+    b = (b*b) << 1;                                         // compute 2b^2
+    if(a < b) return true;                                  // a>0, b<0, and a^2 < 2b^2 implies that a + sqrt(2) b < 0
+    return false;                                           // a>0, b<0, and a^2 >= 2b^2 implies that a+sqrt(2)b >= 0
 }
+
+bool Z2::operator>(Z2& other)  {return other < *this;}
+bool Z2::operator>=(Z2& other) {return !(*this < other);}
+bool Z2::operator<=(Z2& other) {return !(*this > other);}
 
 /**
  * Overloads the < operator for Z2
@@ -207,6 +208,19 @@ bool Z2::operator>(const int8_t& i){
     Z2 tmp = Z2(i,0,0);
     return *this > tmp;
 }  
+
+/**
+ * Overloads the = operator for Z2
+ * @param other reference to object make *this equal to
+ * @return *this reference to this object which has been made equal to other
+ */
+Z2& Z2::operator=(const int8_t& other){
+    //assigns an operator
+    val[0] = other;
+    val[1] = 0;
+    val[2] = 0;
+    return *this;
+}
 
 /**
  * Overloads the = operator for Z2

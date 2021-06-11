@@ -31,6 +31,7 @@ public:
     bool operator==(const Z2&); //function that checks equality between two Z2
     bool operator==(const int8_t&); //function that checks equality between two Z2
     bool operator!=(const Z2&); //function that checks equality between two Z2
+    Z2& operator=(const int8_t&); //function that makes the operator have equal entries to parameter
     Z2& operator=(const Z2&); //function that makes the operator have equal entries to parameter
     Z2& reduce(); //auxiliary function to make sure every triad is in a consistent most reduced form
     int8_t* scale(const int8_t&); //auxiliary function to make sure that when addition is performed the exponents in the denominators are equal
