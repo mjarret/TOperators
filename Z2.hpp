@@ -22,11 +22,11 @@ public:
     Z2 operator-(Z2&); //handles subtraction
     bool operator<(Z2&);
     bool operator<(const int8_t&);
-    const bool operator<(const Z2& other) const;
+    const bool operator<(const Z2&) const;
     bool operator>(const int8_t&);
-    bool operator>(Z2& other);
-    bool operator<=(Z2& other);
-    bool operator>=(Z2& other);
+    bool operator>(Z2&);
+    bool operator<=(Z2&);
+    bool operator>=(Z2&);
     Z2 operator*(const Z2&); //function that handles multiplication
     bool operator==(const Z2&); //function that checks equality between two Z2
     bool operator==(const int8_t&); //function that checks equality between two Z2

@@ -65,58 +65,20 @@ Z2& Z2::operator+=(Z2& other){
     reduce();
     return *this;
 }
-// Z2& Z2::operator+=(Z2& other){
-//     int8_t exp_diff = val[2]-other.val[2];
-//     bool is_odd = exp_diff%2;
-//     if(exp_diff%2 && exp_diff < 0) {
-//         val[0] += other.val[1] << ((exp_diff+is_odd)>>1 + 1);
-//         val[1] += other.val[0] << (exp_diff+is_odd)>>1;
-//         reduce();
-//         return *this;
-//     }
-//     if(exp_diff%2 && exp_diff > 0) {
-//         val[0] <<= ((exp_diff+is_odd)>>1+1);
-//         val[1] <<= (exp_diff+is_odd)>>1;
-//         val[0] += other.val[1];
-//         val[1] += other.val[0];
-//         reduce();
-//         return *this;
-//     }
-//     if(exp_diff > 0) {
-//         val[0] += other.val[0]<<(exp_diff>>1);
-//         val[1] += other.val[1]<<(exp_diff>>1);
-//         reduce();
-//         return *this;
-//     }
-//     val[0] <<= ((-exp_diff)>>1);
-//     val[1] <<= ((-exp_diff)>>1);
-//     val[0] += other.val[0];
-//     val[1] += other.val[1];
-//     val[2] = other.val[2];
-//     reduce();
-//     return *this;
-// }
-
 
 /**
  * Overloads the - operator for Z2
  * @param 
  * @return negation of Z2
  */
-Z2 Z2::operator-(){
-    return Z2(-val[0],-val[1],val[2]);
-}
+Z2 Z2::operator-(){ return Z2(-val[0],-val[1],val[2]);}
 
 /**
  * Overloads the - operator for Z2
  * @param other reference to Z2 object to be subtracted
  * @return summation the subtraction *this - other
  */
-Z2 Z2::operator-(Z2& other){
-    Z2 tmp = -other;
-    tmp += *this;
-    return tmp;
-}
+Z2 Z2::operator-(Z2& other) {return -other + *this;}
 
 /**
  * Overloads the * operator for Z2
@@ -124,7 +86,7 @@ Z2 Z2::operator-(Z2& other){
  * @return
  */
 Z2 Z2::operator*(const Z2& other){
-    return Z2(val[0]*other[0]+2*val[1]*other[1], val[0]*other[1]+val[1]*other[0], val[2]+other[2]);
+    return Z2(val[0]*other[0]+(val[1]*other[1]<<1), val[0]*other[1]+val[1]*other[0], val[2]+other[2]);
 }
 
 /**
@@ -141,7 +103,8 @@ bool Z2::operator==(const Z2& other){
  * @param other reference to Z2 object to be compared to
  * @return whether or not the entries of the two Z2s are equal
  */
-bool Z2::operator==(const int8_t& i){return *this == Z2(i,0,0);}
+bool Z2::operator==(const int8_t& i){return val[0]==i && val[1]==0 && val[2]==0;}
+
 bool Z2::operator!=(const Z2& other){return !(*this == other);}
 
 /**
@@ -153,8 +116,8 @@ bool Z2::operator<(Z2& other){
     Z2 diff = *this - other;                                        // Find difference and store as Z2
     if(diff.val[0] < 0) {                                    
         if(diff.val[1] <= 0) return true;                           // a<0 and b<=0 means that diff < 0
-        int8_t a2 = diff.val[0]*diff.val[0];                  // compute a^2    
-        int8_t b2 = (diff.val[1]*diff.val[1]) << 1;           // compute 2b^2
+        int8_t a2 = diff.val[0]*diff.val[0];                        // compute a^2    
+        int8_t b2 = (diff.val[1]*diff.val[1]) << 1;                 // compute 2b^2
         if(a2 > b2) return true;                                    // a<0, b>0, and a^2 > 2 b^2 implies that a+sqrt(2)b <0
         return false;                                               // a<0, b>0, and a^2 <= 2 b^2 implies that a+sqrt(2)b >= 0
     }
@@ -219,6 +182,11 @@ Z2& Z2::operator=(const int8_t& other){
     val[0] = other;
     val[1] = 0;
     val[2] = 0;
+    return *this;
+}
+
+Z2 Z2::abs() {
+    if(*this < 0) return -*this;
     return *this;
 }
 

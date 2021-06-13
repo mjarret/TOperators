@@ -30,7 +30,7 @@
 using namespace std;
 
 const int8_t numThreads = 1;
-const int8_t tCount = 6;
+const int8_t tCount = 10;
 const Z2 inverse_root2 = Z2::inverse_root2();
 
 //Turn on to save data
@@ -42,7 +42,7 @@ const bool tIO = false;
 const int8_t genFrom = tCount;
 
 //Saves every saveInterval iterations
-const int saveInterval = 1000000;
+const long saveInterval = __LONG_MAX__;
 
 SO6 identity() {
     SO6 I = SO6({-1});
@@ -104,7 +104,7 @@ set<SO6> fileRead(int8_t tc, vector<SO6> tbase) {
     return tset;
 }
 
-void writeResults(int8_t i, int8_t tsCount, int8_t currentCount, set<SO6> next) {
+void writeResults(int8_t i, int8_t tsCount, int8_t currentCount, set<SO6> &next) {
     if(!saveResults) return;
     auto start = chrono::high_resolution_clock::now();
     string fileName = "data/T" + to_string(i+1) + ".tmp";
@@ -148,12 +148,11 @@ int main(){
         current = fileRead(genFrom-1, tsv);
         start = genFrom - 1;
     }
-
+    
     for(int8_t i = start; i<tCount; i++){
         std::cout<<"\nBeginning T-Count "<<(i+1)<<"\n";
 
         auto start = chrono::high_resolution_clock::now();
-        next.clear();
         
         // Main loop here
         ifstream tfile;
@@ -170,10 +169,11 @@ int main(){
                     if(!(next.size() % saveInterval)) writeResults(i, t.getLast(), currentCount, next);
                 }
                 currentCount = 0;
+                if(i == tCount -1) break;    // We only need one T matrix at the final T-count
             }
             for(SO6 p : prior) next.erase(p); // Erase T-1
             // Write results out
-            writeResults(i, tsv.size(), currentCount, next); // This always finishes at tsv.size()
+            writeResults(i, tsv.size(), currentCount, next); // This always finishes at tsv.size() unless we've completed our
         }
         else {
             next = fileRead(i+1, tsv);
@@ -214,12 +214,12 @@ int main(){
         }
         // End main loop
         auto end = chrono::high_resolution_clock::now();
+        prior.clear();
         prior.swap(current);                                    // T++
         current.swap(next);                                     // T++
-
         // Begin reporting
         auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
-        std::cout << ">>>Found " << next.size() << " new matrices in " << ret << "ms\n";
+        std::cout << ">>>Found " << current.size() << " new matrices in " << ret << "ms\n";
     }
     chrono::duration<double> timeelapsed = chrono::high_resolution_clock::now() - tbefore;
     std::cout<< "\nTotal time elapsed: "<<chrono::duration_cast<chrono::milliseconds>(timeelapsed).count()<<"ms\n";

@@ -59,10 +59,10 @@ int lexComp (const Z2 first[6], const Z2 second[6]) {
  *
  */
 SO6::SO6(){
-    for(int8_t i=0; i<6; i++){
-        for(int8_t j=0; j<6; j++)
-            arr[i][j]=Z2();
-    }
+    // for(int8_t i=0; i<6; i++){
+    //     for(int8_t j=0; j<6; j++)
+    //         arr[i][j]=Z2();
+    // }
     hist = {};
 }
 
@@ -71,10 +71,10 @@ SO6::SO6(){
  * @param t the object history
  */
 SO6::SO6(std::vector<int8_t> t){
-    for(int8_t i=0; i<6; i++){
-        for(int8_t j=0; j<6; j++)
-            arr[i][j]=Z2();
-    }
+    // for(int8_t i=0; i<6; i++){
+    //     for(int8_t j=0; j<6; j++)
+    //         arr[i][j]=Z2();
+    // }
     hist = t;
 }
 
@@ -133,7 +133,7 @@ void SO6::fixSign() {
             if(arr[col][row] < 0) {
                 while(row<6) arr[col][row++] = -arr[col][row];
             }
-            else if(arr[col][row] == Z2()) continue;
+            else if(arr[col][row] == 0) continue;
             break;
         }
     }
@@ -159,7 +159,7 @@ void SO6::lexOrder() {
 }
 
 bool SO6::operator<(const SO6 &other) const {
-    for(int8_t col = 0; col < 6; col++) {
+    for(int8_t col = 0; col < 5; col++) {
         switch (lexComp((*this)[col],other[col])) {   
             case -1: return true;
             case 1: return false;
