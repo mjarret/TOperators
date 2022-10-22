@@ -1,233 +1,242 @@
 /**
  * T Operator Product Generation Main File
  * @file main.cpp
- * @author Andrew Glaudell
- * @author Michael Jarret
- * @author Swan Klein
  * @author Connor Mooney
- * @author Mingzhen Tian
+ * @author Michael Jarret
+ * @author Andrew Glaudell
  * @author Jacob Weston
- * @version 5/25/21
+ * @author Mingzhen Tian
+ * @version 6/1/21
  */
 
 #include <algorithm>
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <thread>
-#include <unordered_map>
 #include <future>
-#include <math.h>
+#include <fstream>
+#include <chrono>
+#include <set>
+#include <string>
+#include <sstream>
+#include <functional>
+#include <stdint.h>
+#include <stdlib.h>
+#include <omp.h>
 #include "Z2.hpp"
 #include "SO6.hpp"
 
 
 using namespace std;
 
-//Generate up to this tCount
-const int tCount = 4;
+const int8_t numThreads = 1;
+const int8_t tCount = 5;
+const Z2 inverse_root2 = Z2::inverse_root2();
 
-//These make up a linked list of SO6 objects
-//It won't have many operations, it only needs to do a few things
-struct Node {
-    SO6 so6{};
-    struct Node* next{};
-};
+//Turn on to save data
+const bool saveResults = false;
 
-//Creates the dummy head of a linked list
-struct Node* createHead(SO6 so6) {
-    struct Node* head = new Node();
-    struct Node* node = new Node();
-    head->so6 = SO6();
-    head->next = node;
-    node->so6 = so6;
-    node->next = NULL;
-    return head;
-}
+//Turn this on if you want to read in saved data
+const bool tIO = false;
+//If tIO true, choose which tCount to begin generating from:
+const int8_t genFrom = tCount;
 
-//Push a node to the spot after the dummy head
-void push(struct Node* &head, SO6 so6) {
-    struct Node* node = new Node();
-    node->so6 = so6;
-    node->next = head->next;
-    head->next = node;
+//Saves every saveInterval iterations
+const long saveInterval = __LONG_MAX__;
+
+SO6 identity() {
+    SO6 I = SO6({-1});
+    for(int8_t k =0; k<6; k++) {
+        I(k,k) = 1;
+    }
+    I.lexOrder();
+    return I;
 }
 
 /**
  * Returns the SO6 object corresponding to T[i+1, j+1]
  * @param i the first index to determine the T matrix
  * @param j the second index to determine the T matrix
+ * @param matNum the index of the SO6 object in the base vector
  * @return T[i+1,j+1]
  */
-
-SO6 tMatrix(int j, int i) {
+const SO6 tMatrix(int8_t i, int8_t j, int8_t matNum) {
     // Generates the T Matrix T[i+1, j+1]
-    // SO6 t("T(" + to_string(i) + "," + to_string(j) + ")");
-    SO6 t;
-    int sign;
-    if ((i + 1 == j && i <= 4 && i >= 0) || (j + 1 == i && j <= 4 && j >= 0))
-        sign = 1;
-    else
-        sign = -1;
-    for (int k = 0; k < 6; k++) {
-        t(k, k) = Z2(1,0,0);
-    }
-    t(i, i) = Z2(0, 1, 1);
-    t(i, j) = Z2(0, -sign, 1);
-    t(j, i) = Z2(0, sign, 1);
-    t(j, j) = Z2(0, 1, 1);
+    SO6 t= SO6({matNum});                              
+    for(int8_t k = 0; k < 6; k++) t[k][k] = 1;            // Initialize to the identity matrix
+    t[i][i] = inverse_root2;                              // Change the i,j cycle to appropriate 1/sqrt(2)
+    t[j][j] = inverse_root2;
+    t[i][j] = inverse_root2;
+    if(abs(i-j)!=1) t[i][j].negate();                     // Lexicographic ordering and sign fixing undoes the utility of this, not sure whether to keep it
+    t[j][i] = -t[i][j];
     t.fixSign();
     t.lexOrder();
     return(t);
 }
 
-//Appends an SO6 matrix to its 1-norm's linked list
-void mapAppend(unordered_map<float, struct Node*> &map, SO6 so6) {
-    float norm = so6.normFloat();
-    auto head = map.find(norm);
-    if (head != map.end()) {
-        //Head is not actually the head, it is an iterator that
-        //points to a pair containing the head
-        push(head->second, so6);
+set<SO6> fileRead(int8_t tc, vector<SO6> tbase) {
+    ifstream tfile;
+    tfile.open(("data/T" + to_string(tc) + ".txt").c_str());
+    if(!tfile) {
+        cout << "File does not exist.\n";
+        exit(1);
     }
-    else {
-        map[norm] = createHead(so6);
-    }
-}
-
-/**
- * Returns the product of each matrix in t with each matrix in s
- * @param t an unordered_map of SO6 objects
- * @param s an unordered_map of (the 15 base) SO6 objects
- * @return an unordered_map of the products of matrices in t and s
- */
-unordered_map<float, struct Node*> genProds(unordered_map<float, struct Node*> t, unordered_map<float, struct Node*> s) {
-    unordered_map<float, struct Node*> prod;
-    std::unordered_map<float, struct Node*>::iterator titr = t.begin();
-    while (titr != t.end()) {
-        struct Node* tnode = titr++->second->next;
-        while (tnode != NULL) {
-            std::unordered_map<float, struct Node*>::iterator sitr = s.begin();
-            while (sitr != s.end()) {
-                struct Node* snode = sitr++->second->next;
-                while (snode != NULL) {
-                    mapAppend(prod, snode->so6 * tnode->so6);
-                    snode = snode->next;
-                }
+    set<SO6> tset;
+    char hist;
+    string mat; //Now unused except as a buffer
+    long i = 0;
+    vector<int8_t> tmp;
+    SO6 m;
+    //First line contains data for which iteration to start from, so skip it
+    getline(tfile, mat);
+    while(tfile.get(hist)) {
+        //Convert hex character to integer
+        tmp.push_back((hist >= 'a') ? (hist - 'a' + 10) : (hist - '0'));
+        if (++i%tc == 0) {
+            m = tbase.at(tmp.at(tmp.size() - 1));
+            for(int8_t k = tmp.size()-2; k > -1; k--) {
+                m = tbase.at(tmp.at(k))*m;
             }
-            tnode = tnode->next;
+            tset.insert(m);
+            tmp.clear();
         }
     }
-    return prod;
+    return tset;
 }
 
-/**
- * Deletes elements unique up to signed column permutations
- * @param t an unordered_map of T-Count N SO6 objects to prune
- * @param s an unordered_map of T-Count N-2 SO6 objects
- */
-void prunePerms(unordered_map<float, struct Node*> t, unordered_map<float, struct Node*> t2) {
-    std::unordered_map<float, struct Node*>::iterator titr = t.begin();
-    while (titr != t.end()) {
-        struct Node* tnode = titr++->second;
-        bool nextDelete = false; //Don't go to the next node if the previous next node was deleted
-        //Compare with self and with t2
-        while (tnode->next != NULL) {
-            struct Node* cnode = tnode->next;
-            while (cnode->next != NULL) {
-                if (tnode->next->so6==(cnode->next->so6)) {
-                    cnode->next = cnode->next->next;
-                    nextDelete = true;
-                }
-                if (!nextDelete) {
-                    cnode = cnode->next;
-                }
-                else {
-                    nextDelete = false;
-                }
-            }
-            float norm = tnode->next->so6.normFloat();
-            auto head = t2.find(norm);
-            if (head != t2.end()) {
-                cnode = head->second;
-                while (cnode->next != NULL) {
-                    if (tnode->next->so6==(cnode->next->so6)) {
-                        tnode->next = tnode->next->next;
-                        nextDelete = true;
-                        break;
-                    }
-                    cnode = cnode->next;
-                }
-            }
-            if (!nextDelete) {
-                tnode = tnode->next;
-            }
-            else {
-                nextDelete = false;
-            }
-        }
-    }
-}
-
-//Writes all matrices of a T-count to the file given as input
-void writeSO6(unordered_map<float, struct Node*> t, string fileName) {
+void writeResults(int8_t i, int8_t tsCount, int8_t currentCount, set<SO6> &next) {
+    if(!saveResults) return;
+    auto start = chrono::high_resolution_clock::now();
+    string fileName = "data/T" + to_string(i+1) + ".tmp";
     ofstream write = ofstream(fileName);
-    std::unordered_map<float, struct Node*>::iterator itr = t.begin();
-    int matrixCount = 0; //For checking results against other programs
-    while (itr != t.end()) {
-        struct Node* node = itr++->second->next;
-        while (node != NULL) {
-            // write << node->so6.getName() << "\n";
-            write << node->so6;
-            matrixCount++;
-            node = node->next;
-        }
-    }
-    cout << fileName << " vector count : " << to_string(matrixCount) << "\n";
+    write << +tsCount << ' ' << +currentCount << '\n';
+    for(SO6 n : next) write<<n;
     write.close();
- }
-
-int main() {
-
-    string fileName = "T1.txt";
-    //The keys of this map are the norm of the first row of the SO6 in the linked list
-    unordered_map<float, struct Node*> t[tCount];
-
+    std::rename(("data/T" + to_string(i+1) + ".tmp").c_str(), ("data/T" + to_string(i+1) + ".txt").c_str());
+    auto end = chrono::high_resolution_clock::now();
+    auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
+    cout<<">>>Wrote T-Count "<<(i+1)<<" to 'data/T"<<(i+1)<<".txt' in " << ret << "ms\n";
+}
+int main(){
+    // Z2 tmp = Z2(7,0,3);
+    // Z2 tmp2 = Z2(1,0,1);
+    // tmp = tmp*tmp2;
+    // std::cout << tmp << "\n";
+    // tmp2 = Z2(3,0,2);
+    // std::cout << "-" << tmp2 << "\n";
+    // tmp += tmp2;
+    // std::cout << tmp << "\n";
+    // int x = -1;
+    // x <<= 5;
+    // std::cout << "x:" << x << "\n";
+    // return 0;
     //timing
     auto tbefore = chrono::high_resolution_clock::now();
-    //generating list of T matrices in the order Andrew wanted
-    for (int i = 0; i < 15; i++) {
-        if (i < 5)
-            mapAppend(t[0],tMatrix(0, i + 1));
-        else if (i < 9)
-            mapAppend(t[0],tMatrix(1, i - 3));
-        else if (i < 12)
-            mapAppend(t[0],tMatrix(2, i - 6));
-        else if (i < 14)
-            mapAppend(t[0],tMatrix(3, i - 8));
-        else
-            mapAppend(t[0],tMatrix(4, 5));
-    }
-    cout << "Generated T count 1 \n";
 
-    writeSO6(t[0], fileName);
-    cout << "Wrote T-Count 1 to '" << fileName << "' \n\n";
-
-    //Generating Higher T-Counts
-    for (int i = 1; i < tCount; i++) {
-        fileName = "T" + to_string(i + 1) + ".txt";
-        t[i] = genProds(t[i - 1], t[0]);
-        prunePerms(t[i], (i > 1) ? t[i - 2] : unordered_map<float, struct Node*>{});
-        cout << "Generated T-count " << (i + 1) << "\n";
-        writeSO6(t[i], fileName);
-        cout << "Wrote T-Count " << (i + 1) << " to '" << fileName << "' \n\n";
+    set<SO6> prior;
+    set<SO6> current({identity()});
+    set<SO6> next;
+    int8_t start = 0;
+    
+    vector<SO6> tsv; //t count 1 matrices
+    for(int8_t i = 0; i<15; i++){
+        if(i<5)         tsv.push_back(tMatrix(0,i+1,i));
+        else if(i<9)    tsv.push_back(tMatrix(1, i-3,i));
+        else if(i<12)   tsv.push_back(tMatrix(2, i-6,i));
+        else if(i<14)   tsv.push_back(tMatrix(3, i-8,i));
+        else            tsv.push_back(tMatrix(4,5,i));
+        
     }
 
-    //Time display and exit message
+    bool reject[15][15];
+    for(int i = 0; i<15; i++) {
+        for(int j = 0; j<15; j++) {
+            reject[i][j] = (tsv[i]*tsv[j] == identity());
+        }
+    }
+
+    // return 0;
+
+    if(tIO && tCount > 2) {
+        prior = fileRead(genFrom-2, tsv);
+        current = fileRead(genFrom-1, tsv);
+        start = genFrom - 1;
+    }
+    
+    for(int8_t i = start; i<tCount; i++){
+        std::cout<<"\nBeginning T-Count "<<(i+1)<<"\n";
+
+        auto start = chrono::high_resolution_clock::now();
+        
+        // Main loop here
+        ifstream tfile;
+        tfile.open(("data/T" + to_string(i + 1) + ".txt").c_str());
+
+        int currentCount = 0;
+        if (!tIO || !tfile) {
+            if (tfile) tfile.close();
+
+            for(SO6 t : tsv) {
+                for(SO6 curr : current) {
+                    next.insert(t*curr);     // New product list for T + 1 stored as next
+                    currentCount++;
+                    if(!(next.size() % saveInterval)) writeResults(i, t.getLast(), currentCount, next);
+                }
+                currentCount = 0;
+                if(i == tCount -1) break;    // We only need one T matrix at the final T-count
+            }
+            for(SO6 p : prior) next.erase(p); // Erase T-1
+            // Write results out
+            writeResults(i, tsv.size(), currentCount, next); // This always finishes at tsv.size() unless we've completed our
+        }
+        else {
+            next = fileRead(i+1, tsv);
+            string str;
+            getline(tfile, str);
+            stringstream s(str);
+            getline(s, str, ' ');
+            int8_t tsCount = stoi(str);
+            getline(s, str, ' ');
+            currentCount = stoi(str);
+            tfile.close();
+
+            std::vector<SO6>::iterator titr = tsv.begin();
+            std::set<SO6>::iterator citr = current.begin();
+            advance(titr, tsCount);
+            advance(citr, currentCount);
+            SO6 t, curr;
+            while (titr != tsv.end()) {
+                t = *titr;
+                while (citr != current.end()) {
+                    curr = *citr;
+                    if(reject[t.getLast()][curr.getLast()] && curr.getLast()!=-1) {
+                        citr++;
+                        continue;
+                    }
+                    next.insert(t*curr);
+                    currentCount++;
+                    if(!(next.size() % saveInterval)) writeResults(i, tsCount, currentCount, next);
+                    citr++;
+                }
+                for(SO6 p : prior) next.erase(p);
+                titr++;
+                tsCount++;
+                currentCount = 0;
+                citr = current.begin();
+            }
+            writeResults(i, tsv.size(), currentCount, next); // This always finishes at tsv.size()
+        }
+        // End main loop
+        auto end = chrono::high_resolution_clock::now();
+        prior.clear();
+        prior.swap(current);                                    // T++
+        current.swap(next);                                     // T++
+        // Begin reporting
+        auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
+        std::cout << ">>>Found " << current.size() << " new matrices in " << ret << "ms\n";
+    }
     chrono::duration<double> timeelapsed = chrono::high_resolution_clock::now() - tbefore;
-    cout << "Time elapsed to generate up to T-count " << tCount << ": " << timeelapsed.count() << "\n";
-    cout << "Press any character and then Enter to continue...";
-    string i;
-    cin >> i;
+    std::cout<< "\nTotal time elapsed: "<<chrono::duration_cast<chrono::milliseconds>(timeelapsed).count()<<"ms\n";
+    // std::cout << Z2::count[0] << " " << Z2::count[1] << " " << Z2::count[2] << "\n";
     return 0;
 }
