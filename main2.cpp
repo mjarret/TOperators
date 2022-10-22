@@ -30,7 +30,7 @@
 using namespace std;
 
 const int8_t numThreads = 1;
-const int8_t tCount = 10;
+const int8_t tCount = 8;
 const Z2 inverse_root2 = Z2::inverse_root2();
 
 //Turn on to save data
@@ -62,7 +62,7 @@ SO6 identity() {
  */
 const SO6 tMatrix(int8_t i, int8_t j, int8_t matNum) {
     // Generates the T Matrix T[i+1, j+1]
-    SO6 t= SO6({matNum});                                 
+    SO6 t= SO6({matNum});                              
     for(int8_t k = 0; k < 6; k++) t[k][k] = 1;            // Initialize to the identity matrix
     t[i][i] = inverse_root2;                              // Change the i,j cycle to appropriate 1/sqrt(2)
     t[j][j] = inverse_root2;
@@ -119,6 +119,18 @@ void writeResults(int8_t i, int8_t tsCount, int8_t currentCount, set<SO6> &next)
 }
 
 int main(){
+    // Z2 tmp = Z2(7,0,3);
+    // Z2 tmp2 = Z2(1,0,1);
+    // tmp = tmp*tmp2;
+    // std::cout << tmp << "\n";
+    // tmp2 = Z2(3,0,2);
+    // std::cout << "-" << tmp2 << "\n";
+    // tmp += tmp2;
+    // std::cout << tmp << "\n";
+    // int x = -1;
+    // x <<= 5;
+    // std::cout << "x:" << x << "\n";
+    // return 0;
     //timing
     auto tbefore = chrono::high_resolution_clock::now();
 
@@ -134,14 +146,20 @@ int main(){
         else if(i<12)   tsv.push_back(tMatrix(2, i-6,i));
         else if(i<14)   tsv.push_back(tMatrix(3, i-8,i));
         else            tsv.push_back(tMatrix(4,5,i));
+        
     }
 
     bool reject[15][15];
     for(int i = 0; i<15; i++) {
         for(int j = 0; j<15; j++) {
             reject[i][j] = (tsv[i]*tsv[j] == identity());
+            // std::cout << tsv[i] << "*" <<  tsv[j] << "\n\n";
+            // std::cout << tsv[i]*tsv[j] << "\n";
+            // if(i==0 && j==1) std::exit(EXIT_FAILURE);
         }
     }
+
+    // return 0;
 
     if(tIO && tCount > 2) {
         prior = fileRead(genFrom-2, tsv);

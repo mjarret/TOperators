@@ -31,28 +31,14 @@ bool lexLess (Z2 first[6],Z2 second[6]) {
  * @param second 
  * @return int8_t 
  */
-// int lexComp (const Z2 first[6], const Z2 second[6]) {
-//     for(int8_t i = 0; i < 6 ; i++) {
-//         if(first[i] < second[i]) return 1;
-//         if(second[i] < first[i]) return -1;
-//     }
-//     return 0;
-// }
-int lexComp (const Z2 first[6], const Z2 second[6]) {
-    // Z2 f[6],s[6];
-    // for(int i = 0; i<6; i++) {
-    //     f[i]=first[i];
-    //     s[i]=second[i];
-    // }
-    // if(lexLess(f,s)) return -1;
-    // if(lexLess(s,f)) return 1;
+int8_t lexComp (const Z2 first[6], const Z2 second[6]) {
     for(int8_t i = 0; i < 6 ; i++) {
+        if(first[i] == second[i]) continue;                 // Presently, this is the longest time consumed, but it's faster than just doing inequalities.
         if(first[i] < second[i]) return -1;
-        if(second[i] < first[i]) return 1;
+        return 1;
     }
     return 0;
 }
-
 
 /**
  * Basic constructor. Initializes Zero matrix.
@@ -63,7 +49,7 @@ SO6::SO6(){
     //     for(int8_t j=0; j<6; j++)
     //         arr[i][j]=Z2();
     // }
-    hist = {};
+    // hist = {};
 }
 
 /**
@@ -109,10 +95,10 @@ SO6 SO6::operator*(SO6& other){
     for(int8_t row=0; row<6; row++){
         for(int8_t col = 0; col<6; col++){
             for(int8_t k = 0; k<6; k++){
-                // next = arr[row][k]*other[col][k];            // This transpose * other
-                next = arr[k][row]*other[col][k];            // This not transpose * other
-                // prod(col,row) += next;
-                prod[col][row] += next;
+                if(arr[k][row][0]!=0 && other[col][k][0] !=0) {  // Skip zeros
+                    next = arr[k][row]*other[col][k];            // This not transpose * other
+                    prod[col][row] += next;
+                }
             }
         }
     }
@@ -159,7 +145,7 @@ void SO6::lexOrder() {
 }
 
 bool SO6::operator<(const SO6 &other) const {
-    for(int8_t col = 0; col < 5; col++) {
+    for(int8_t col = 0; col < 5; col++) {                   // There is no need to check the final column due to constraints
         switch (lexComp((*this)[col],other[col])) {   
             case -1: return true;
             case 1: return false;
@@ -201,16 +187,13 @@ bool SO6::operator==(const SO6 &other) const {
  * @returns reference ostream with the matrix's display form appended
  */
 std::ostream& operator<<(std::ostream& os, const SO6& m){
-    for (int8_t i : m.hist) {
-        os << std::hex << +i;//<< " ";
-    }
-    //os << "\n";
-/*     for(int row = 0; row<6; row++){
+    os << "\n";
+    for(int row = 0; row<6; row++){
         os << '[';
         for(int col = 0; col<6; col++)
             os << m[col][row] <<' ';
         os << "] \n";
     }
-    os << "\n"; */
+    os << "\n"; 
     return os;
 }
