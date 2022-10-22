@@ -18,7 +18,7 @@
  */
 bool lexLess (Z2 first[6],Z2 second[6]) {
     for(int8_t i = 0; i < 6 ; i++) {
-        if(first[i] != second[i]) return first[i] < second[i];
+        if(first[i] != second[i]) return second[i] < first[i];    // Maybe changing the ordering?
     }
     return false;
 }
@@ -32,9 +32,15 @@ bool lexLess (Z2 first[6],Z2 second[6]) {
  * @return int8_t 
  */
 int8_t lexComp (const Z2 first[6], const Z2 second[6]) {
+    Z2::count[0]++;
     for(int8_t i = 0; i < 6 ; i++) {
-        if(first[i] == second[i]) continue;                 // Presently, this is the longest time consumed, but it's faster than just doing inequalities.
-        if(first[i] < second[i]) return -1;
+        Z2::count[1]++;
+        if(first[i] == second[i]) {
+            Z2::count[2]++;
+            continue;                   // Presently, this is the longest time consumed, but it's faster than just doing inequalities. 
+                                        // This is also true about 90% of the time...
+        }
+        if(second[i] < first[i]) return -1;
         return 1;
     }
     return 0;
@@ -70,9 +76,8 @@ SO6::SO6(std::vector<int8_t> t){
  * @param t the object history
  */
 SO6::SO6(Z2 a[6][6], std::vector<int8_t> t){
-    // initializes SO6's entries according to a
-    for(int8_t col = 0; col<6; col++){
-        for(int8_t row = 0; row<6; row++) {
+    for(int col = 0; col<6; col++){
+        for(int row = 0; row<6; row++) {
             arr[col][row] = a[row][col];
         }
     }
@@ -92,18 +97,36 @@ SO6 SO6::operator*(SO6& other){
     Z2 next;
     
     // Compute product
-    for(int8_t row=0; row<6; row++){
-        for(int8_t col = 0; col<6; col++){
-            for(int8_t k = 0; k<6; k++){
-                if(arr[k][row][0]!=0 && other[col][k][0] !=0) {  // Skip zeros
-                    next = arr[k][row]*other[col][k];            // This not transpose * other
+    for(int col=0; col<6; col++){
+        bool col_sign=0;
+        bool flag=false;
+        for(int row = 0; row<6; row++){
+            for(int k = 0; k<6; k++){
+                if(arr[k][row][0]!=0 && other[col][k][0] !=0) {     // Skip zeros
+                    next = arr[k][row]*other[col][k];               // This not transpose * other
                     prod[col][row] += next;
                 }
             }
+            // if(col_sign) {
+            //     prod[col][row].negate();
+            //     continue;
+            // }
+            // if(!flag && prod[col][row][0]!=0) {
+            //     flag = true;
+            //     if(prod[col][row] < 0) {
+            //         col_sign=1;
+            //         prod[col][row].negate();
+            //     }
+            // }
         }
+        // if(col_sign==1) {
+        //     for(int row=0; row<6; row++) {
+        //         prod[col][row].negate();
+        //     }
+        // }
     }
-    prod.fixSign();
-    prod.lexOrder();
+    prod.fixSign();                                                 // Try to do this while computing the product? doesn't seem to make anything faster
+    prod.lexOrder();                                                    
     prod.hist = hist;
     prod.hist.insert(prod.hist.end(), other.hist.begin(), other.hist.end());
     return prod;
@@ -114,19 +137,20 @@ SO6 SO6::transpose() {
 }
 
 void SO6::fixSign() {
-    for(int8_t col = 0; col<6; col++){
-        for(int8_t row = 0; row < 6; row++) {
+    for(int col = 0; col<6; col++){
+        for(int row = 0; row < 6; row++) {
+            if(arr[col][row][0] == 0) continue;
             if(arr[col][row] < 0) {
                 while(row<6) arr[col][row++] = -arr[col][row];
             }
-            else if(arr[col][row] == 0) continue;
             break;
         }
     }
 }
 
 
-// This may be slow
+// This may be slow, I think that I sped this up somehow by not sorting things
+// but instead giving a permutation?
 void SO6::lexOrder() {
     Z2* myZ2[] = {arr[0],arr[1],arr[2],arr[3],arr[4],arr[5]};
     std::vector<Z2*> myvector(myZ2,myZ2+6);

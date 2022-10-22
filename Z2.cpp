@@ -109,7 +109,14 @@ Z2 Z2::operator*(const Z2 &other)
  */
 const bool Z2::operator==(const Z2 &other) const
 {
-    return (val[0] == other[0] && val[1] == other[1] && val[2] == other[2]);
+    // count[0]++;
+    // if(val[0] == 0 && other[0]==0) return true;
+    //     return true;
+    // }
+    // count[1]++;
+    // if(val[1] == other[1]) count[1]++;
+    // if(val[2] == other[2]) count[2]++;
+    return val[0] == other[0] && val[1] == other[1] && val[2] == other[2];
 }
 
 /**
@@ -118,7 +125,7 @@ const bool Z2::operator==(const Z2 &other) const
  * @return true if this < other and false otherwise
  */
 bool Z2::operator==(Z2 &other)
-{
+{  
     return (val[0]==other[0] && val[1]==other[1] && val[2]==other[2]);
 }
 

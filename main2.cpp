@@ -30,7 +30,7 @@
 using namespace std;
 
 const int8_t numThreads = 1;
-const int8_t tCount = 8;
+const int8_t tCount = 6;
 const Z2 inverse_root2 = Z2::inverse_root2();
 
 //Turn on to save data
@@ -117,7 +117,6 @@ void writeResults(int8_t i, int8_t tsCount, int8_t currentCount, set<SO6> &next)
     auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
     cout<<">>>Wrote T-Count "<<(i+1)<<" to 'data/T"<<(i+1)<<".txt' in " << ret << "ms\n";
 }
-
 int main(){
     // Z2 tmp = Z2(7,0,3);
     // Z2 tmp2 = Z2(1,0,1);
@@ -153,9 +152,6 @@ int main(){
     for(int i = 0; i<15; i++) {
         for(int j = 0; j<15; j++) {
             reject[i][j] = (tsv[i]*tsv[j] == identity());
-            // std::cout << tsv[i] << "*" <<  tsv[j] << "\n\n";
-            // std::cout << tsv[i]*tsv[j] << "\n";
-            // if(i==0 && j==1) std::exit(EXIT_FAILURE);
         }
     }
 
@@ -241,5 +237,6 @@ int main(){
     }
     chrono::duration<double> timeelapsed = chrono::high_resolution_clock::now() - tbefore;
     std::cout<< "\nTotal time elapsed: "<<chrono::duration_cast<chrono::milliseconds>(timeelapsed).count()<<"ms\n";
+    std::cout << Z2::count[0] << " " << Z2::count[1] << " " << Z2::count[2] << "\n";
     return 0;
 }
