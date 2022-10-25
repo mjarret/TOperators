@@ -4,6 +4,7 @@ class Z2{
 public:
     Z2(const int8_t,const int8_t,const int8_t); // the ints paseed form the entries of val
     Z2();// the entries of val are all 0
+    void increaseDE();
     inline int8_t& operator[](int8_t i){
         // return val[i];
     if(i == 2) return val[2];
