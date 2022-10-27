@@ -141,49 +141,63 @@ bool Z2::operator!=(const Z2 &other) { return !(*this == other); }
  * @param other reference to Z2 object to be compared to
  * @return true if this < other and false otherwise
  */
-bool Z2::operator<(Z2 &other)
-{
-    Z2 diff = *this - other;                            // Find difference and store as Z2, this could be expensive
-    if (diff.val[0] < 0)
-    {
-        if (diff.val[1] <= 0) return true;              // a<0 and b<=0 means that diff < 0
-        int a2 = diff.val[0] * diff.val[0];             // compute a^2
-        int b2 = (diff.val[1] * diff.val[1]) << 1;      // compute 2b^2
-        if (a2 > b2) return true;                       // a<0, b>0, and a^2 > 2 b^2 implies that a+sqrt(2)b <0
-        return false;                                   // a<0, b>0, and a^2 <= 2 b^2 implies that a+sqrt(2)b >= 0
-    }
-    if (diff.val[1] >= 0)   return false;               // a>=0 and b>=0 means that diff >=0
-    int a2 = diff.val[0] * diff.val[0];                 // compute a^2
-    int b2 = (diff.val[1] * diff.val[1]) << 1;          // compute 2b^2
-    if (a2 < b2) return true;                           // a>0, b<0, and a^2 < 2b^2 implies that a + sqrt(2) b < 0
-    return false;                                       // a>0, b<0, and a^2 >= 2b^2 implies that a+sqrt(2)b >= 0
-}
+// bool Z2::operator<(Z2 &other)
+// {
+//     // if (val[0]!=other[0]) {
+//     //     return val[0]<other[0];
+//     // }
+//     // if (val[1]!=other[1]) return val[1] < other[1];
+//     // if (val[2]!=other[2]) return val[2] < other[2];
+
+//     Z2 diff = *this - other;                            // Find difference and store as Z2, this could be expensive
+//     if (diff.val[0] < 0)
+//     {
+//         if (diff.val[1] <= 0) return true;              // a<0 and b<=0 means that diff < 0
+//         int a2 = diff.val[0] * diff.val[0];             // compute a^2
+//         int b2 = (diff.val[1] * diff.val[1]) << 1;      // compute 2b^2
+//         if (a2 > b2) return true;                       // a<0, b>0, and a^2 > 2 b^2 implies that a+sqrt(2)b <0
+//         return false;                                   // a<0, b>0, and a^2 <= 2 b^2 implies that a+sqrt(2)b >= 0
+//     }
+//     if (diff.val[1] >= 0)   return false;               // a>=0 and b>=0 means that diff >=0
+//     int a2 = diff.val[0] * diff.val[0];                 // compute a^2
+//     int b2 = (diff.val[1] * diff.val[1]) << 1;          // compute 2b^2
+//     if (a2 < b2) return true;                           // a>0, b<0, and a^2 < 2b^2 implies that a + sqrt(2) b < 0
+//     return false;                                       // a>0, b<0, and a^2 >= 2b^2 implies that a+sqrt(2)b >= 0
+// }
 
 /**
- * Overloads the < operator for Z2
+ * Overloads the < operator for Z2. This is similar to radix ordering. It DOES NOT return actual x < y, but rather compares
+ * term by term
  * @param other reference to Z2 object to be compared to
  * @return true if this < other and false otherwise
  */
 const bool Z2::operator<(const Z2 &other) const
 {
-    int8_t k = std::max(val[2], other[2]);
-    int a = val[0] << (k - val[2]);
-    int b = val[1] << (k - val[2]);
-    a -= (other[0] << (k - other[2]));
-    b -= (other[1] << (k - other[2]));
-    if (a < 0)
-    {
-        if (b <= 0) return true;        // a<0 and b<=0 means that diff < 0
-        a *= a;                         // compute a^2
-        b = (b * b) << 1;               // compute 2b^2
-        if (a > b) return true;         // a<0, b>0, and a^2 > 2 b^2 implies that a+sqrt(2)b <0
-        return false;                   // a<0, b>0, and a^2 <= 2 b^2 implies that a+sqrt(2)b >= 0
-    }
-    if (b >= 0) return false;           // a>=0 and b>=0 means that diff >=0
-    a *= a;                             // compute a^2
-    b = (b * b) << 1;                   // compute 2b^2
-    if (a < b) return true;             // a>0, b<0, and a^2 < 2b^2 implies that a + sqrt(2) b < 0
-    return false;                       // a>0, b<0, and a^2 >= 2b^2 implies that a+sqrt(2)b >= 0
+    if((val[0]!=other[0])) return val[0] < other[0];
+    if (val[1]!=other[1]) return val[1] < other[1];
+    return val[2] < other[2];
+
+    /**
+     *  This used to compare term by term as below 
+     */
+    // int k = std::max(val[2], other[2]);
+    // int a = val[0] << (k - val[2]);
+    // int b = val[1] << (k - val[2]);
+    // a -= (other[0] << (k - other[2]));
+    // b -= (other[1] << (k - other[2]));
+    // if (a < 0)
+    // {
+    //     if (b <= 0) return true;        // a<0 and b<=0 means that diff < 0
+    //     a *= a;                         // compute a^2
+    //     b = (b * b) << 1;               // compute 2b^2
+    //     if (a > b) return true;         // a<0, b>0, and a^2 > 2 b^2 implies that a+sqrt(2)b <0
+    //     return false;                   // a<0, b>0, and a^2 <= 2 b^2 implies that a+sqrt(2)b >= 0
+    // }
+    // if (b >= 0) return false;           // a>=0 and b>=0 means that diff >=0
+    // a *= a;                             // compute a^2
+    // b = (b * b) << 1;                   // compute 2b^2
+    // if (a < b) return true;             // a>0, b<0, and a^2 < 2b^2 implies that a + sqrt(2) b < 0
+    // return false;                       // a>0, b<0, and a^2 >= 2b^2 implies that a+sqrt(2)b >= 0
 }
 
 bool Z2::operator>(Z2 &other) { return (other < *this); }

@@ -21,7 +21,7 @@ public:
     Z2& operator+=(Z2&); //handles +=
     Z2 operator-(); //handles negation
     Z2 operator-(Z2&); //handles subtraction
-    bool operator<(Z2&);
+    // bool operator<(Z2&);
     bool operator<(const int8_t&);
     const bool operator<(const Z2&) const;
     bool operator>(const int8_t&);

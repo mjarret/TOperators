@@ -69,8 +69,6 @@ const SO6 tMatrix(int8_t i, int8_t j, int8_t matNum) {
     t[i][j] = inverse_root2;
     if(abs(i-j)!=1) t[i][j].negate();                     // Lexicographic ordering and sign fixing undoes the utility of this, not sure whether to keep it
     t[j][i] = -t[i][j];
-    // t.fixSign();
-    // t.lexOrder();
     return(t);
 }
 

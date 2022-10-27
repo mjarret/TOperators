@@ -109,43 +109,42 @@ SO6 SO6::tMultiply(const int& i) {
 SO6 SO6::tMultiply(const int &i,const int &j)
 {
     SO6 prod = *this;
-
-    // Compute product
-    switch (i-j) {
-    case -1: 
-        for(int col = 0; col < 6; col++) {
-            prod[col][i] = (arr[col][i] - arr[col][j]);
-            prod[col][i].increaseDE();
-            prod[col][j] = (arr[col][j] + arr[col][i]);
-            prod[col][j].increaseDE();
-        }
-        prod.fixSign(); // Try to do this while computing the product? doesn't seem to make anything faster
-        prod.lexOrder();
-        return prod;
-        break;
-    case 1:
-        for(int col = 0; col < 6; col++) {
-            prod[col][i] = (arr[col][i] - arr[col][j]);
-            prod[col][i].increaseDE();
-            prod[col][j] = (arr[col][j] + arr[col][i]);
-            prod[col][j].increaseDE();
-        }
-        prod.fixSign(); // Try to do this while computing the product? doesn't seem to make anything faster
-        prod.lexOrder();
-        return prod;
-        break;
-    default:
-        for(int col = 0; col < 6; col++) {
-            prod[col][i] = (arr[col][i] + arr[col][j]);
-            prod[col][i].increaseDE();
-            prod[col][j] = (arr[col][j] - arr[col][i]);
-            prod[col][j].increaseDE();
-        }
-        prod.fixSign(); // Try to do this while computing the product? doesn't seem to make anything faster
-        prod.lexOrder();
-        return prod;
-        break;
+    for(int col = 0; col < 6; col++) {
+        prod[col][i] = (arr[col][i] + arr[col][j]);
+        if(prod[col][i][0]!=0) prod[col][i].increaseDE();
+        prod[col][j] = (arr[col][j] - arr[col][i]);
+        if(prod[col][j][0]!=0) prod[col][j].increaseDE();
     }
+    // Compute product
+    // switch (i-j) {
+    // case -1: 
+    //     for(int col = 0; col < 6; col++) {
+    //         prod[col][i] = (arr[col][i] + arr[col][j]);
+    //         if(prod[col][i][0] != 0) prod[col][i].increaseDE();
+    //         prod[col][j] = (arr[col][j] - arr[col][i]);
+    //         if(prod[col][j][0]!=0) prod[col][j].increaseDE();
+    //     }
+    //     break;
+    // case 1:
+    //     for(int col = 0; col < 6; col++) {
+    //         prod[col][i] = (arr[col][i] + arr[col][j]);
+    //         if(prod[col][i][0]!=0) prod[col][i].increaseDE();
+    //         prod[col][j] = (arr[col][j] - arr[col][i]);
+    //         if(prod[col][j][0]!=0) prod[col][j].increaseDE();
+    //     }
+    //     break;
+    // default:
+        // for(int col = 0; col < 6; col++) {
+        //     prod[col][i] = (arr[col][i] + arr[col][j]);
+        //     if(prod[col][i][0]!=0) prod[col][i].increaseDE();
+        //     prod[col][j] = (arr[col][j] - arr[col][i]);
+        //     if(prod[col][j][0]!=0) prod[col][j].increaseDE();
+        // }
+        // break;
+    // }
+    prod.fixSign(); // Try to do this while computing the product? doesn't seem to make anything faster
+    prod.lexOrder();
+    return prod;
 }
 
 void SO6::fixSign()
@@ -156,7 +155,7 @@ void SO6::fixSign()
         {
             if (arr[col][row][0] == 0)
                 continue;
-            if (arr[col][row] < 0)
+            if (arr[col][row][0] < 0) 
             {
                 while (row < 6)
                     arr[col][row++].negate();
@@ -170,6 +169,7 @@ void SO6::fixSign()
 // but instead giving a permutation?
 void SO6::lexOrder()
 {
+    // Z2 arr2[6][6] = arr;
     Z2 *myZ2[] = {arr[0], arr[1], arr[2], arr[3], arr[4], arr[5]};
     std::vector<Z2 *> myvector(myZ2, myZ2 + 6);
     std::sort(myvector.begin(), myvector.end(), lexLess);
@@ -181,9 +181,9 @@ void SO6::lexOrder()
             arr2[i][j] = (myvector.at(i))[j];
         }
     }
-    for (int8_t i = 0; i < 6; i++)
+    for (int i = 0; i < 6; i++)
     {
-        for (int8_t j = 0; j < 6; j++)
+        for (int j = 0; j < 6; j++)
         {
             arr[i][j] = arr2[i][j];
         }
@@ -205,39 +205,38 @@ bool SO6::operator<(const SO6 &other) const
     return false;
 }
 
-/** overloads == method to check equality of SO6 matrices
- *  @param other reference to SO6 to be checked against
- *  @return whether or not (*this) and other are equivalent
- */
-bool SO6::operator==(SO6 &other)
-{
-    // SO6 are the same if they have the same triangle
-    // TODO: lower right triangle seems super fast, but can try out others
-    for (int8_t col = 5; col > -1; col--)
-    {
-        for (int8_t row = 5; row > 5 - col - 1; row--)
-        {
-            if (arr[col][row] != other[col][row])
-                return false;
-        }
-    }
-    return true;
-}
+// /** overloads == method to check equality of SO6 matrices
+//  *  @param other reference to SO6 to be checked against
+//  *  @return whether or not (*this) and other are equivalent
+//  */
+// bool SO6::operator==(SO6 &other)
+// {
+//     for (int8_t col = 5; col > -1; col--)
+//     {
+//         for (int8_t row = 5; row > 5 - col - 1; row--)
+//         {
+//             if (arr[col][row] != other[col][row])
+//                 return false;
+//         }
+//     }
+//     return true;
+// }
 
-bool SO6::operator==(const SO6 &other) const
-{
-    // SO6 are the same if they have the same triangle
-    // TODO: lower right triangle seems super fast, but can try out others
-    for (int col = 5; col > -1; col--)
-    {
-        for (int row = 5; row > 5 - col - 1; row--)
-        {
-            if (arr[col][row] < other[col][row] || other[col][row] < arr[col][row])
-                return false;
-        }
-    }
-    return true;
-}
+//Don't think this works
+// bool SO6::operator==(const SO6 &other) const
+// {
+//     // SO6 are the same if they have the same triangle
+//     // TODO: lower right triangle seems super fast, but can try out others
+//     for (int col = 5; col > -1; col--)
+//     {
+//         for (int row = 5; row > 5 - col - 1; row--)
+//         {
+//             if (arr[col][row] < other[col][row] || other[col][row] < arr[col][row])
+//                 return false;
+//         }
+//     }
+//     return true;
+// }
 
 /**
  * Overloads << function for SO6.
@@ -250,10 +249,14 @@ std::ostream &operator<<(std::ostream &os, const SO6 &m)
     os << "\n";
     for (int row = 0; row < 6; row++)
     {
-        os << '[';
+        if (row == 0) os << "⌈";
+        else if(row == 6) os << "⌊";
+        else os << "|";
         for (int col = 0; col < 6; col++)
             os << m[col][row] << ' ';
-        os << "] \n";
+        if (row ==0) os << "⌉";
+        else if (row == 6) {os << "⌋\n";}
+        else {os << "| \n";}
     }
     os << "\n";
     return os;
