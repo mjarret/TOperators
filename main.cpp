@@ -20,7 +20,9 @@
 #include <string>
 #include <sstream>
 #include <functional>
+#include <cstring>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
 #include "Z2.hpp"
@@ -28,50 +30,21 @@
 
 
 using namespace std;
-
-const int8_t numThreads = 1;
-const int8_t tCount = 7;
 const Z2 inverse_root2 = Z2::inverse_root2();
 
-//Turn on to save data
-const bool saveResults = false;
-
-//Turn this on if you want to read in saved data
-const bool tIO = false;
-//If tIO true, choose which tCount to begin generating from:
-const int8_t genFrom = tCount;
-
-//Saves every saveInterval iterations
-const long saveInterval = __LONG_MAX__;
-
-SO6 identity() {
-    SO6 I;
-    for(int8_t k =0; k<6; k++) {
-        I(k,k) = 1;
-    }
-    I.lexOrder();
-    return I;
-}
+static int8_t tCount;                   //Default tCount = 0
+static int8_t numThreads = 1;           //Default number of threads
+static bool saveResults = false;        //Turn on to save data
+static bool tIO = false;                //Turn this on if you want to read in saved data
+long saveInterval = __LONG_MAX__;       //Default save interval
+static chrono::duration<double> timeelapsed;
 
 /**
- * Returns the SO6 object corresponding to T[i+1, j+1]
- * @param i the first index to determine the T matrix
- * @param j the second index to determine the T matrix
- * @param matNum the index of the SO6 object in the base vector
- * @return T[i+1,j+1]
+ * @brief Reads in data that has been saved from a previous run of this program
+ * @param tc the tcount we want to read in up to
+ * @param tbase not sure what this does
+ * @return should return a current set of SO6 matrices generated at T count tc
  */
-const SO6 tMatrix(int8_t i, int8_t j, int8_t matNum) {
-    // Generates the T Matrix T[i+1, j+1]
-    SO6 t;                            
-    for(int k = 0; k < 6; k++) t[k][k] = 1;            // Initialize to the identity matrix
-    t[i][i] = inverse_root2;                              // Change the i,j cycle to appropriate 1/sqrt(2)
-    t[j][j] = inverse_root2;
-    t[i][j] = inverse_root2;
-    if(abs(i-j)!=1) t[i][j].negate();                     // Lexicographic ordering and sign fixing undoes the utility of this, not sure whether to keep it
-    t[j][i] = -t[i][j];
-    return(t);
-}
-
 set<SO6> fileRead(int8_t tc, vector<SO6> tbase) {
     ifstream tfile;
     tfile.open(("data/T" + to_string(tc) + ".txt").c_str());
@@ -102,6 +75,13 @@ set<SO6> fileRead(int8_t tc, vector<SO6> tbase) {
     return tset;
 }
 
+/**
+ * @brief Method to write results to a file
+ * @param i index of T count being written out
+ * @param tsCount unsure what this does
+ * @param currentCount unsure what this does
+ * @param next also unsure
+ */
 void writeResults(int8_t i, int8_t tsCount, int8_t currentCount, set<SO6> &next) {
     if(!saveResults) return;
     auto start = chrono::high_resolution_clock::now();
@@ -116,99 +96,120 @@ void writeResults(int8_t i, int8_t tsCount, int8_t currentCount, set<SO6> &next)
     cout<<">>>Wrote T-Count "<<(i+1)<<" to 'data/T"<<(i+1)<<".txt' in " << ret << "ms\n";
 }
 
-int main(){
-    auto tbefore = chrono::high_resolution_clock::now();    
-    set<SO6> prior;
-    set<SO6> current({identity()});
-    set<SO6> next;
-    int8_t start = 0;
-    
-    vector<SO6> tsv; //t count 1 matrices
-    for(int8_t i = 0; i<15; i++){
-        if(i<5)         tsv.push_back(tMatrix(0,i+1,i));
-        else if(i<9)    tsv.push_back(tMatrix(1, i-3,i));
-        else if(i<12)   tsv.push_back(tMatrix(2, i-6,i));
-        else if(i<14)   tsv.push_back(tMatrix(3, i-8,i));
-        else            tsv.push_back(tMatrix(4,5,i));
+/**
+ * @brief Initialize command line arguments passed to main
+ * @param argc Number of arguments
+ * @param argv List of arguments
+ */
+void setParameters(int argc, char** &argv) {
+    if(argc==1) {
+            std::cout << "usage: main.out -tcount t [-v] [-threads n] [-save] [-saveinterval m] [-recover]\n\n";
+            std::exit(EXIT_SUCCESS);
+        }
+    for(int i=1; i<argc; i++) {
+        if(strcmp(argv[i], "-tcount") == 0) {
+            tCount = std::stoi(argv[i+1]);
+        } 
+        if(strcmp(argv[i], "-v") == 0) {
+            // This should be "verbose," but we don't have that ability yet
+        }
+        if(strcmp(argv[i], "-threads") == 0) {
+            numThreads = std::stoi(argv[i+1]);
+        }
+        if(strcmp(argv[i], "-save") == 0) {
+            saveResults = true;
+        }
+        if(strcmp(argv[i], "-saveinterval") == 0) {
+            saveInterval = std::stol(argv[i+1]);
+        }
+        if(strcmp(argv[i], "-recover") == 0) {
+            tIO = true;
+        }
     }
+}
 
-    if(tIO && tCount > 2) {
-        prior = fileRead(genFrom-2, tsv);
-        current = fileRead(genFrom-1, tsv);
-        start = genFrom - 1;
-    }
+/**
+ * @brief This is the main loop
+ * @param argc number of command line arguments
+ * @param argv vector of command line arguments
+ * @return 0
+ */
+int main(int argc, char** argv){
+    setParameters(argc,argv);                               // Initialize parameters to command line arguments
+    auto program_init_time = chrono::high_resolution_clock::now();    // Begin timekeeping
+    set<SO6> prior;                                         // Set of SO6s that will contain T count i-1
+    set<SO6> current({SO6::identity()});                         // Current set of SO6s for current T count i, initialized to T count 0 = the identity circuit
+    set<SO6> next;                                          // Set to hold the results of T count i+1
 
-    for(int i = start; i<tCount; i++){
+    for(int i = 0; i< tCount; i++){
+        auto tcount_init_time = chrono::high_resolution_clock::now();
         std::cout<<"\nBeginning T-Count "<<(i+1)<<"\n";
-        auto start = chrono::high_resolution_clock::now();
+        // int currentCount = 0;    //Tracks number of inserts
+        // ifstream tfile;
+        // tfile.open(("data/T" + to_string(i + 1) + ".txt").c_str());
         
-        // Main loop here
-        ifstream tfile;
-        tfile.open(("data/T" + to_string(i + 1) + ".txt").c_str());
-
-        int currentCount = 0;
-        if (!tIO || !tfile) {
-            if (tfile) tfile.close();
+        // if (!tIO || !tfile) {
+        //     if (tfile) tfile.close();
             for(int l=0; l<15; l++) {
                 for(SO6 curr : current) {
                     next.insert(curr.tMultiply(l));
-                    currentCount++;
+                    // currentCount++;
                 }
-                currentCount = 0;
+                // currentCount = 0;
                 if(i == tCount -1) break;    // We only need one T matrix at the final T-count
             }
             for(SO6 p : prior) next.erase(p); // Erase T-1
             // Write results out
             // writeResults(i, tsv.size(), currentCount, next); // This always finishes at tsv.size() unless we've completed our
-        }
-        else {
-            // next = fileRead(i+1, tsv);
-            // string str;
-            // getline(tfile, str);
-            // stringstream s(str);
-            // getline(s, str, ' ');
-            // int8_t tsCount = stoi(str);
-            // getline(s, str, ' ');
-            // currentCount = stoi(str);
-            // tfile.close();
+        // }
+        // else {
+        //     // next = fileRead(i+1, tsv);
+        //     // string str;
+        //     // getline(tfile, str);
+        //     // stringstream s(str);
+        //     // getline(s, str, ' ');
+        //     // int8_t tsCount = stoi(str);
+        //     // getline(s, str, ' ');
+        //     // currentCount = stoi(str);
+        //     // tfile.close();
 
-            // std::vector<SO6>::iterator titr = tsv.begin();
-            // std::set<SO6>::iterator citr = current.begin();
-            // advance(titr, tsCount);
-            // advance(citr, currentCount);
-            // SO6 t, curr;
-            // while (titr != tsv.end()) {
-            //     t = *titr;
-            //     while (citr != current.end()) {
-            //         curr = *citr;
-            //         if(reject[t.getLast()][curr.getLast()] && curr.getLast()!=-1) {
-            //             citr++;
-            //             continue;
-            //         }
-            //         next.insert(t*curr);
-            //         currentCount++;
-            //         if(!(next.size() % saveInterval)) writeResults(i, tsCount, currentCount, next);
-            //         citr++;
-            //     }
-            //     for(SO6 p : prior) next.erase(p);
-            //     titr++;
-            //     tsCount++;
-            //     currentCount = 0;
-            //     citr = current.begin();
-            // }
-            // writeResults(i, tsv.size(), currentCount, next); // This always finishes at tsv.size()
-        }
+        //     // std::vector<SO6>::iterator titr = tsv.begin();
+        //     // std::set<SO6>::iterator citr = current.begin();
+        //     // advance(titr, tsCount);
+        //     // advance(citr, currentCount);
+        //     // SO6 t, curr;
+        //     // while (titr != tsv.end()) {
+        //     //     t = *titr;
+        //     //     while (citr != current.end()) {
+        //     //         curr = *citr;
+        //     //         if(reject[t.getLast()][curr.getLast()] && curr.getLast()!=-1) {
+        //     //             citr++;
+        //     //             continue;
+        //     //         }
+        //     //         next.insert(t*curr);
+        //     //         currentCount++;
+        //     //         if(!(next.size() % saveInterval)) writeResults(i, tsCount, currentCount, next);
+        //     //         citr++;
+        //     //     }
+        //     //     for(SO6 p : prior) next.erase(p);
+        //     //     titr++;
+        //     //     tsCount++;
+        //     //     currentCount = 0;
+        //     //     citr = current.begin();
+        //     // }
+        //     // writeResults(i, tsv.size(), currentCount, next); // This always finishes at tsv.size()
+        // }
         // End main loop
         auto end = chrono::high_resolution_clock::now();
         prior.clear();
         prior.swap(current);                                    // T++
         current.swap(next);                                     // T++
         // Begin reporting
-        auto ret = chrono::duration_cast<chrono::milliseconds>(end-start).count();
-        std::cout << ">>>Found " << current.size() << " new matrices in " << ret << "ms\n";
+        timeelapsed = chrono::high_resolution_clock::now() - tcount_init_time;
+        std::cout << ">>> Found " << current.size() << " new matrices in " << chrono::duration_cast<chrono::milliseconds>(timeelapsed).count() << "ms\n";
     }
-    chrono::duration<double> timeelapsed = chrono::high_resolution_clock::now() - tbefore;
-    std::cout<< "\nTotal time elapsed: "<<chrono::duration_cast<chrono::milliseconds>(timeelapsed).count()<<"ms\n";
-    std::cout << Z2::count[0] << " " << Z2::count[1] << " " << Z2::count[2] << "\n";
+    timeelapsed = chrono::high_resolution_clock::now() - program_init_time;
+    std::cout<< "\nTotal time elapsed: " << chrono::duration_cast<chrono::milliseconds>(timeelapsed).count()<<"ms\n";
+    // std::cout << Z2::count[0] << " " << Z2::count[1] << " " << Z2::count[2] << "\n";    // Useful for statistics tracking only
     return 0;
 }

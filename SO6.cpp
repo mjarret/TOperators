@@ -15,12 +15,11 @@
  * @param second array of Z2 of length 6
  * @return -1 if first < second, 0 if equal, 1 if first > second
  */
-bool lexLess(Z2 first[6], Z2 second[6])
+bool lexLess(Z2 *first, Z2 *second)
 {
-    for (int8_t i = 0; i < 6; i++)
+    for (int i = 0; i < 6; i++)
     {
-        if (first[i] != second[i])
-            return second[i] < first[i]; // Maybe changing the ordering?
+        if (first[i] != second[i]) return second[i] < first[i];             // This "reversed" ordering guarantees identity displays normal
     }
     return false;
 }
@@ -147,6 +146,12 @@ SO6 SO6::tMultiply(const int &i,const int &j)
     return prod;
 }
 
+/**
+ * @brief Method to construct the identity matrix
+ * @return 
+ */
+
+
 void SO6::fixSign()
 {
     for (int col = 0; col < 6; col++)
@@ -169,16 +174,15 @@ void SO6::fixSign()
 // but instead giving a permutation?
 void SO6::lexOrder()
 {
-    // Z2 arr2[6][6] = arr;
-    Z2 *myZ2[] = {arr[0], arr[1], arr[2], arr[3], arr[4], arr[5]};
-    std::vector<Z2 *> myvector(myZ2, myZ2 + 6);
-    std::sort(myvector.begin(), myvector.end(), lexLess);
+    Z2 *myZ2[] = {arr[0], arr[1], arr[2], arr[3], arr[4], arr[5]};  //List of pointers to data addresses
+    std::vector<Z2 *> myvector(myZ2, myZ2 + 6);                     //Vector of pointers
+    std::sort(myvector.begin(), myvector.end(), lexLess);           //Sort the pointers
     Z2 arr2[6][6];
-    for (int8_t i = 0; i < 6; i++)
+    for (int i = 0; i < 6; i++)
     {
-        for (int8_t j = 0; j < 6; j++)
+        for (int j = 0; j < 6; j++)
         {
-            arr2[i][j] = (myvector.at(i))[j];
+            arr2[i][j] = myvector.at(i)[j];                       //myvector.at(i) is a pointer to arr[x]
         }
     }
     for (int i = 0; i < 6; i++)

@@ -19,6 +19,13 @@ public:
     void genLDE(); //generates LDE, called after multiplication and constructor
     friend std::ostream& operator<<(std::ostream&,const SO6&); //display
     bool operator==(const SO6 &other) const;
+    static const SO6 identity() {
+    SO6 I;
+    for(int8_t k =0; k<6; k++) {
+        I(k,k) = 1;
+    }
+    return I;
+}
 private:
     Z2 arr[6][6];
 };
