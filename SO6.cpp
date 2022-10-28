@@ -147,11 +147,8 @@ SO6 SO6::tMultiply(const int &i,const int &j)
 }
 
 /**
- * @brief Method to construct the identity matrix
- * @return 
+ * @brief Sign fixing method, puts things in appropriate order
  */
-
-
 void SO6::fixSign()
 {
     for (int col = 0; col < 6; col++)
@@ -209,6 +206,33 @@ bool SO6::operator<(const SO6 &other) const
     return false;
 }
 
+int8_t SO6::getLDE() {
+    int8_t ret;
+    for(int i=0; i<6; i++) {
+        for(int j=0; j<6; j++) {
+           ret=std::max(ret,arr[i][j][2]); 
+        }
+    }
+    return ret;
+}
+
+SO6 SO6::getPattern() {
+    SO6 ret;
+    int8_t lde = (*this).getLDE();
+    for(int i=0; i<6; i++) {
+        for(int j=0; j<6; j++) {
+           if(arr[i][j][2]<lde-1) continue;
+           if(arr[i][j][0]==0) continue;
+           if(arr[i][j][2]==lde) {
+                ret[i][j][0]++;
+                continue;
+           }
+           ret[i][j][1]++;
+        }
+    }
+    return ret;
+}
+
 // /** overloads == method to check equality of SO6 matrices
 //  *  @param other reference to SO6 to be checked against
 //  *  @return whether or not (*this) and other are equivalent
@@ -253,14 +277,14 @@ std::ostream &operator<<(std::ostream &os, const SO6 &m)
     os << "\n";
     for (int row = 0; row < 6; row++)
     {
-        if (row == 0) os << "⌈";
-        else if(row == 6) os << "⌊";
-        else os << "|";
+        if (row == 0) os << "⌈ ";
+        else if(row == 5) os << "⌊ ";
+        else os << "| ";
         for (int col = 0; col < 6; col++)
             os << m[col][row] << ' ';
-        if (row ==0) os << "⌉";
-        else if (row == 6) {os << "⌋\n";}
-        else {os << "| \n";}
+        if (row ==0) os << "⌉\n";
+        else if (row == 5) {os << "⌋\n";}
+        else {os << "|\n";}
     }
     os << "\n";
     return os;

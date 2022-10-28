@@ -152,7 +152,9 @@ int main(int argc, char** argv){
         //     if (tfile) tfile.close();
             for(int l=0; l<15; l++) {
                 for(SO6 curr : current) {
-                    next.insert(curr.tMultiply(l));
+                    SO6 toInsert =curr.tMultiply(l); 
+                    toInsert.getPattern();
+                    next.insert(toInsert);
                     // currentCount++;
                 }
                 // currentCount = 0;

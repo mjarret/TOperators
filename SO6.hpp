@@ -15,17 +15,18 @@ public:
     const Z2* operator[](const int8_t i) const {return arr[i];}  // Return the array element needed. 
     SO6 tMultiply(const int &);
     SO6 tMultiply(const int &,const int &);
-    int8_t getLDE(){return(0);} //getter for LDE
     void genLDE(); //generates LDE, called after multiplication and constructor
     friend std::ostream& operator<<(std::ostream&,const SO6&); //display
     bool operator==(const SO6 &other) const;
     static const SO6 identity() {
-    SO6 I;
-    for(int8_t k =0; k<6; k++) {
-        I(k,k) = 1;
+        SO6 I;
+        for(int8_t k =0; k<6; k++) {
+            I(k,k) = 1;
+        }
+        return I;
     }
-    return I;
-}
+    int8_t getLDE();
+    SO6 getPattern();
 private:
     Z2 arr[6][6];
 };
