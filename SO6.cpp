@@ -1,10 +1,10 @@
 #include <algorithm>
 #include <iostream>
-#include <vector>
+// #include <vector>
 #include <array>
 #include <sstream>
-#include <bitset>
-#include <iterator>
+// #include <bitset>
+// #include <iterator>
 #include <stdint.h>
 #include "Z2.hpp"
 #include "SO6.hpp"
@@ -167,29 +167,55 @@ void SO6::fixSign()
     }
 }
 
-// This may be slow, I think that I sped this up somehow by not sorting things
-// but instead giving a permutation?
+
+/// @brief This implements insertion sort
 void SO6::lexOrder()
 {
-    Z2 *myZ2[] = {arr[0], arr[1], arr[2], arr[3], arr[4], arr[5]};  //List of pointers to data addresses
-    std::vector<Z2 *> myvector(myZ2, myZ2 + 6);                     //Vector of pointers
-    std::sort(myvector.begin(), myvector.end(), lexLess);           //Sort the pointers
-    Z2 arr2[6][6];
-    for (int i = 0; i < 6; i++)
-    {
-        for (int j = 0; j < 6; j++)
-        {
-            arr2[i][j] = myvector.at(i)[j];                       //myvector.at(i) is a pointer to arr[x]
-        }
-    }
-    for (int i = 0; i < 6; i++)
-    {
-        for (int j = 0; j < 6; j++)
-        {
-            arr[i][j] = arr2[i][j];
+    for(int i=1; i < 6; i++) {
+        for(int j=i; j>0 && lexLess(arr[j],arr[j-1]); j--) {
+            std::swap(arr[j],arr[j-1]);
         }
     }
 }
+
+/// @brief This implements an optimal sorting network
+// void SO6::lexOrder()
+// {
+//     if(lexLess(arr[1],arr[0])) std::swap(arr[1],arr[0]);
+//     if(lexLess(arr[3],arr[2])) std::swap(arr[3],arr[2]);
+//     if(lexLess(arr[5],arr[4])) std::swap(arr[5],arr[4]);
+//     if(lexLess(arr[2],arr[0])) std::swap(arr[2],arr[0]);
+//     if(lexLess(arr[5],arr[3])) std::swap(arr[3],arr[5]);
+//     if(lexLess(arr[4],arr[1])) std::swap(arr[1],arr[4]);
+//     if(lexLess(arr[1],arr[0])) std::swap(arr[1],arr[0]);
+//     if(lexLess(arr[3],arr[2])) std::swap(arr[3],arr[2]);
+//     if(lexLess(arr[5],arr[4])) std::swap(arr[5],arr[4]);
+//     if(lexLess(arr[2],arr[1])) std::swap(arr[2],arr[1]);
+//     if(lexLess(arr[4],arr[3])) std::swap(arr[4],arr[3]);
+//     if(lexLess(arr[3],arr[2])) std::swap(arr[3],arr[2]);
+// }
+
+// /// @brief This uses std::sort
+// void SO6::lexOrder() {
+//     Z2 *myZ2[] = {arr[0], arr[1], arr[2], arr[3], arr[4], arr[5]};  //List of pointers to data addresses
+//     std::vector<Z2 *> myvector(myZ2, myZ2 + 6);                     //Vector of pointers
+//     std::sort(myvector.begin(), myvector.end(), lexLess);           //Sort the pointers
+//     Z2 arr2[6][6];
+//     for (int i = 0; i < 6; i++)
+//     {
+//         for (int j = 0; j < 6; j++)
+//         {
+//             arr2[i][j] = myvector.at(i)[j];                       //myvector.at(i) is a pointer to arr[x]
+//         }
+//     }
+//     for (int i = 0; i < 6; i++)
+//     {
+//         for (int j = 0; j < 6; j++)
+//         {
+//             arr[i][j] = arr2[i][j];
+//         }
+//     }
+// }
 
 bool SO6::operator<(const SO6 &other) const
 {
@@ -197,10 +223,8 @@ bool SO6::operator<(const SO6 &other) const
     { // There is no need to check the final column due to constraints
         switch (lexComp((*this)[col], other[col]))
         {
-        case -1:
-            return true;
-        case 1:
-            return false;
+            case -1:    return true;
+            case 1:     return false;
         }
     }
     return false;
@@ -224,7 +248,7 @@ SO6 SO6::getPattern() {
            if(arr[i][j][2]<lde-1) continue;
            if(arr[i][j][0]==0) continue;
            if(arr[i][j][2]==lde) {
-                ret[i][j][0]++;
+                ret[i][j]=Z2(1,arr[i][j][1]%2,0);
                 continue;
            }
            ret[i][j][1]++;
@@ -233,28 +257,25 @@ SO6 SO6::getPattern() {
     return ret;
 }
 
-// /** overloads == method to check equality of SO6 matrices
-//  *  @param other reference to SO6 to be checked against
-//  *  @return whether or not (*this) and other are equivalent
-//  */
-// bool SO6::operator==(SO6 &other)
-// {
-//     for (int8_t col = 5; col > -1; col--)
-//     {
-//         for (int8_t row = 5; row > 5 - col - 1; row--)
-//         {
-//             if (arr[col][row] != other[col][row])
-//                 return false;
-//         }
-//     }
-//     return true;
-// }
+/** overloads == method to check equality of SO6 matrices
+ *  @param other reference to SO6 to be checked against
+ *  @return whether or not (*this) and other are equivalent
+ */
+bool SO6::operator==(SO6 &other)
+{
+    for (int col = 5; col > -1; col--)
+    {
+        for (int row = 5; row > 5 - col - 1; row--)
+        {
+            if (arr[col][row] != other[col][row])
+                return false;
+        }
+    }
+    return true;
+}
 
 //Don't think this works
-// bool SO6::operator==(const SO6 &other) const
-// {
-//     // SO6 are the same if they have the same triangle
-//     // TODO: lower right triangle seems super fast, but can try out others
+// bool SO6::opral induction is likely the correct proof technique here...)ower right triangle seems super fast, but can try out others
 //     for (int col = 5; col > -1; col--)
 //     {
 //         for (int row = 5; row > 5 - col - 1; row--)
