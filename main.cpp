@@ -27,7 +27,7 @@ static bool tIO = false;                //Turn this on if you want to read in sa
 long saveInterval = __LONG_MAX__;       //Default save interval
 static chrono::duration<double> timeelapsed;
 const SO6 identity = SO6::identity();
-
+static SO6 tofind;                      // in case we're searching for this
 // /**
 //  * @brief Reads in data that has been saved from a previous run of this program
 //  * @param tc the tcount we want to read in up to
@@ -126,22 +126,8 @@ void recursiveMultiply(SO6 prev, int len) {
     }
 }
 
-
-
-/**
- * @brief This is the main loop
- * @param argc number of command line arguments
- * @param argv vector of command line arguments
- * @return 0
- */
-int main(int argc, char** argv){
-    setParameters(argc,argv);                               // Initialize parameters to command line arguments
-    auto program_init_time = chrono::high_resolution_clock::now();    // Begin timekeeping
-    set<SO6> prior;                                         // Set of SO6s that will contain T count i-1
-    set<SO6> current({SO6::identity()});                         // Current set of SO6s for current T count i, initialized to T count 0 = the identity circuit
-    set<SO6> next;                                          // Set to hold the results of T count i+1
-
-    SO6 tofind;
+/// @brief This sets a matrix that we're looking for the pattern of
+void setToFind() {
     tofind[2][0] = Z2(1,0,0);
     tofind[3][0] = Z2(1,0,0);
     tofind[4][0] = Z2(1,1,0);
@@ -167,7 +153,20 @@ int main(int argc, char** argv){
     tofind[2][5] = Z2(1,1,0);
     tofind[4][5] = Z2(1,0,0);
     tofind.lexOrder();
+}
 
+/**
+ * @brief This is the main loop
+ * @param argc number of command line arguments
+ * @param argv vector of command line arguments
+ * @return 0
+ */
+int main(int argc, char** argv){
+    setParameters(argc,argv);                               // Initialize parameters to command line arguments
+    auto program_init_time = chrono::high_resolution_clock::now();    // Begin timekeeping
+    set<SO6> prior;                                         // Set of SO6s that will contain T count i-1
+    set<SO6> current({SO6::identity()});                         // Current set of SO6s for current T count i, initialized to T count 0 = the identity circuit
+    set<SO6> next;                                          // Set to hold the results of T count i+1
 
     for(int i = 0; i< tCount; i++){
         auto tcount_init_time = chrono::high_resolution_clock::now();
