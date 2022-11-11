@@ -1,6 +1,7 @@
-#include <algorithm>
 #include <iostream>
+#include <algorithm>
 #include <stdint.h>
+#include <array>
 #include "Z2.hpp"
 
 /**
@@ -37,6 +38,8 @@ Z2 Z2::operator+(Z2 &other)
 {
     Z2 tmp = *this;
     tmp += other;
+    // count[0] = std::max(count[0],(int) tmp[0]);
+    // count[0] = std::max(count[0],(int) tmp[1]);
     return tmp;
 }
 
@@ -48,29 +51,36 @@ Z2 Z2::operator+(Z2 &other)
 Z2 &Z2::operator+=(Z2 &other)
 {
     // 0 cases are the only cases where a=even and Z2 is reduced, so screen them out    
-    if(!other[0]) return *this;
-    if(!val[0]) {   
+    if(other[0]==0) return *this;
+    if(val[0]==0) {   
         *this = other;
         return *this;
     }
 
+    // we now know that val[0] and other[0] are odd. We can save a bit or so by exploiting this
+    // specifically, we can exploit this by doing a = 2*val[0]-1 whenever val[0]!=0.
+    // 2*val[0]-1 == (val[0]<<1)-1, not implemented
     uint8_t exp_diff = std::abs(val[2] - other[2]); 
     bool isNeg = val[2] < other[2];
     bool isOdd = exp_diff%2;
     exp_diff >>= 1;                                 // only want this base 2
     if(!isNeg) {                                    // this has larger denominator than other
-        val[0] += (other[isOdd] << isOdd+exp_diff);
-        val[1] += (other[!isOdd] << exp_diff);
-        if(!exp_diff) reduce();                     // only need to reduce of exponents were the same
+        val[0] += (other.val[isOdd] << isOdd+exp_diff);
+        val[1] += (other.val[!isOdd] << exp_diff);
+        if(!exp_diff) reduce();                     // only need to reduce if exponents were the same
         return *this;
-    }
-    
-    std::swap(val[0],val[isOdd]);     // Does nothing if even
+    }    
+    std::swap(val[0],val[isOdd]);             // Does nothing if even & positive
     val[0] <<= exp_diff + isOdd;
     val[1] <<= exp_diff;
     val[0] += other[0];
     val[1] += other[1];
     val[2] = other[2];
+    return *this;
+}
+
+Z2 &Z2::operator-=(Z2 &other){
+    *this = *this - other;
     return *this;
 }
 
@@ -98,8 +108,12 @@ Z2 Z2::operator-(Z2 &other) { return -other + *this; }
  */
 Z2 Z2::operator*(const Z2 &other)
 {   
-    // if(val[0] == 0) return Z2(0,0,0);              // This check may not be necessary if we're careful
     return Z2(val[0] * other[0] + ((val[1] * other[1]) << 1), val[0] * other[1] + val[1] * other[0], val[2] + other[2]);
+    // Z2 tmp = Z2(val[0] * other[0] + ((val[1] * other[1]) << 1), val[0] * other[1] + val[1] * other[0], val[2] + other[2]);
+    // count[0] = std::max(count[0],(int) tmp[0]);
+    // count[0] = std::max(count[0],(int) tmp[1]);
+    // if(val[0] == 0) return Z2(0,0,0);              // This check may not be necessary if we're careful
+    // return tmp;
 }
 
 void Z2::increaseDE() 
@@ -112,7 +126,7 @@ void Z2::increaseDE()
  * @param other reference to Z2 object to be compared to
  * @return whether or not the entries of the two Z2s are equal
  */
-const bool Z2::operator==(const Z2 &other) const
+bool Z2::operator==(const Z2 &other) const
 {
     return (val[0] == other[0] && val[1] == other[1] && val[2] == other[2]);
 }
@@ -125,6 +139,7 @@ const bool Z2::operator==(const Z2 &other) const
 bool Z2::operator==(Z2 &other)
 {  
     return (val[0]==other[0] && val[1]==other[1] && val[2]==other[2]);
+    // return val[0]^other[0]^val[1]^other[1]^val[2]^other[2] == 0;
 }
 
 /**
@@ -135,17 +150,43 @@ bool Z2::operator==(Z2 &other)
 bool Z2::operator==(const int8_t &i) { return val[0] == i && val[1] == 0 && val[2] == 0; }
 bool Z2::operator!=(const Z2 &other) const { return !(*this == other); }
 
+inline uint32_t Z2::as_uint32() const {
+    // return int32_t((val[0] << 16)^(val[1] << 8 )^(val[2]));
+    const uint32_t mask = 0x80'80'80'80;
+    uint8_t tmp[4];
+    tmp[3] = 0;
+    tmp[2] = val[0];
+    tmp[1] = val[1];
+    tmp[0] = val[2];
+    return *reinterpret_cast<uint32_t*>(&tmp) ^ mask;
+}
+
 /**
  * @brief Overloads the < operator for Z2. This is similar to radix ordering. It DOES NOT return actual x < y, but rather compares term by term
  * @param other reference to Z2 object to be compared to 
  * @return true if this < other in a radix sense and false otherwise
  */
-const bool Z2::operator<(const Z2 &other) const
+bool Z2::operator<(const Z2 &other) const
 {
-    if((val[0]!=other[0])) return val[0] < other[0];
-    if (val[1]!=other[1]) return val[1] < other[1];
-    return val[2] < other[2];
+    // return as_uint32() < other.as_uint32();
 
+    // return as_int32() < other.as_int32();
+    // return std::lexicographical_compare(val,val+2,other.val,other.val+2);
+    // int32_t tmp = (val[0]<<16)^(val[1]<<8)^val[2];
+    // int32_t tmp2 = (other[0]<<16)^(other[1]<<8)^(other[2]);
+    // return tmp < tmp2;
+    if(val[0]<other[0]) 
+        return true;
+    if(val[0]==other[0]) 
+    {
+        if(val[1]<other[1]) 
+            return true;
+        if(val[1]==other[1]) {
+            if(val[2]<other[2]) 
+                return true;
+        }
+    }
+    return false;
     /**
      *  This used to compare term by term as below 
      */
@@ -216,6 +257,20 @@ Z2 &Z2::operator=(const int8_t &other)
  * @return *this reference to this object which has been made equal to other
  */
 Z2 &Z2::operator=(const Z2 &other)
+{
+    // assigns an operator
+    val[0] = other[0];
+    val[1] = other[1];
+    val[2] = other[2];
+    return *this;
+}
+
+/**
+ * Overloads the = operator for Z2
+ * @param other reference to object make *this equal to
+ * @return *this reference to this object which has been made equal to other
+ */
+Z2 &Z2::operator=(Z2 &other)
 {
     // assigns an operator
     val[0] = other[0];
