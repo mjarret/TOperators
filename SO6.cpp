@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <vector>
 #include <algorithm>
-#include "Z2.hpp"
 #include "SO6.hpp"
 
 /**
@@ -101,42 +100,42 @@ SO6 SO6::operator*(SO6 &other)
     return prod;
 }
 
-SO6 SO6::tMultiply(const int &i)
+SO6 SO6::left_multiply_by_T(const int &i)
 {
     if (i < 5)
-        return tMultiply(0, i + 1,i);
+        return left_multiply_by_T(0, i + 1,i);
     if (i < 9)
-        return tMultiply(1, i - 3,i);
+        return left_multiply_by_T(1, i - 3,i);
     if (i < 12)
-        return tMultiply(2, i - 6,i);
+        return left_multiply_by_T(2, i - 6,i);
     if (i < 14)
-        return tMultiply(3, i - 8,i);
-    return tMultiply(4, 5,i);
+        return left_multiply_by_T(3, i - 8,i);
+    return left_multiply_by_T(4, 5,i);
 }
 
-SO6 SO6::tMultiplyTranspose(const int &i)
+SO6 SO6::left_multiply_by_T_transpose(const int &i)
 {
     if (i < 5)
-        return tMultiply(i + 1,0,i+15);
+        return left_multiply_by_T(i + 1,0,i+15);
     if (i < 9)
-        return tMultiply(i - 3,1,i+15);
+        return left_multiply_by_T(i - 3,1,i+15);
     if (i < 12)
-        return tMultiply(i - 6,2,i+15);
+        return left_multiply_by_T(i - 6,2,i+15);
     if (i < 14)
-        return tMultiply(i - 8,3,i+15);
-    return tMultiply(5,4,i+15);
+        return left_multiply_by_T(i - 8,3,i+15);
+    return left_multiply_by_T(5,4,i+15);
 }
 
-SO6 SO6::tMultiply(const int &i, const int &j, const int &p)
+SO6 SO6::left_multiply_by_T(const int &i, const int &j, const int &p)
 {
     SO6 prod = *this;
     prod.hist.push_back(p); 
-    // We are guaranteed that j > i by def of tMultiply
+    // We are guaranteed that j > i by def of left_multiply_by_T
     for (int col = 0; col < 6; col++)
     {
         prod[col][i] += arr[col][j];
         prod[col][i].increaseDE();
-        prod[col][j] -= arr[col][i]; // May want to overload -=
+        prod[col][j] -= arr[col][i];
         prod[col][j].increaseDE();
     }
     prod.lexOrder();
@@ -184,7 +183,7 @@ std::string SO6::printName()
 {
     std::string ret = "";
     // std::reverse(hist.begin(),hist.end());
-    for (int8_t i : hist)
+    for (uint8_t i : hist)
     {
         ret.append(std::to_string((int) i%15));
         if(i > 14) ret.append("t");
@@ -248,9 +247,9 @@ bool SO6::operator<(const SO6 &other) const
     return false;
 }
 
-int8_t SO6::getLDE()
+z2_int SO6::getLDE()
 {
-    int8_t ret;
+    z2_int ret;
     for (int i = 0; i < 6; i++)
     {
         for (int j = 0; j < 6; j++)
@@ -305,6 +304,33 @@ SO6 SO6::getPattern()
     return ret;
 }
 
+void SO6::to_pattern()
+{
+    int8_t lde = (*this).getLDE();
+    for (int i = 0; i < 6; i++)
+    {
+        for (int j = 0; j < 6; j++)
+        {
+            if (arr[i][j][2] < lde - 1) 
+            {   
+                arr[i][j][0] = 0;
+                arr[i][j][1] = 0;
+                arr[i][j][2] = 0;
+                continue;
+            }
+            if (arr[i][j][0] == 0)
+                continue;
+            if (arr[i][j][2] == lde)
+            {
+                arr[i][j] = Z2(1, arr[i][j][1] % 2, 0);
+                continue;
+            }
+            arr[i][j][1] = 1;
+        }
+    }
+    lexOrder();
+}
+
 /** overloads == method to check equality of SO6 matrices
  *  @param other reference to SO6 to be checked against
  *  @return whether or not (*this) and other are equivalent
@@ -327,7 +353,6 @@ SO6 SO6::pattern_mod() {
     for (int col = 0; col < 6; col++) {
         for(int row = 0; row < 6; row++) {
             if(ret[col][row][0] == 0) continue;
-            if(ret[col][row][1]==1 && ret[col][row][0] == 0) std::exit(0);
             ret[col][row][1] = !ret[col][row][1]; 
         }
     }

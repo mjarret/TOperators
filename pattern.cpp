@@ -85,6 +85,7 @@ void pattern::lexicographic_sort() {
             }
         }
     }
+
     pattern tmp;
     for(int col = 0; col<6; col++) {
         for(int row = 0; row<6; row++) {

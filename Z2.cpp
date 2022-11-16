@@ -20,7 +20,7 @@ Z2::Z2()
  * @param b sqrt(2) part of numerator
  * @param c log_2 of the denominator
  */
-Z2::Z2(const int8_t a, const int8_t b, const int8_t c)
+Z2::Z2(const z2_int a, const z2_int b, const z2_int c)
 {
     val[0] = a;
     val[1] = b;
@@ -38,8 +38,6 @@ Z2 Z2::operator+(Z2 &other)
 {
     Z2 tmp = *this;
     tmp += other;
-    // count[0] = std::max(count[0],(int) tmp[0]);
-    // count[0] = std::max(count[0],(int) tmp[1]);
     return tmp;
 }
 
@@ -60,7 +58,7 @@ Z2 &Z2::operator+=(Z2 &other)
     // we now know that val[0] and other[0] are odd. We can save a bit or so by exploiting this
     // specifically, we can exploit this by doing a = 2*val[0]-1 whenever val[0]!=0.
     // 2*val[0]-1 == (val[0]<<1)-1, not implemented
-    uint8_t exp_diff = std::abs(val[2] - other[2]); 
+    uz2_int exp_diff = std::abs(val[2] - other[2]); 
     bool isNeg = val[2] < other[2];
     bool isOdd = exp_diff%2;
     exp_diff >>= 1;                                 // only want this base 2
@@ -110,8 +108,6 @@ Z2 Z2::operator*(const Z2 &other)
 {   
     return Z2(val[0] * other[0] + ((val[1] * other[1]) << 1), val[0] * other[1] + val[1] * other[0], val[2] + other[2]);
     // Z2 tmp = Z2(val[0] * other[0] + ((val[1] * other[1]) << 1), val[0] * other[1] + val[1] * other[0], val[2] + other[2]);
-    // count[0] = std::max(count[0],(int) tmp[0]);
-    // count[0] = std::max(count[0],(int) tmp[1]);
     // if(val[0] == 0) return Z2(0,0,0);              // This check may not be necessary if we're careful
     // return tmp;
 }
@@ -147,13 +143,13 @@ bool Z2::operator==(Z2 &other)
  * @param other reference to Z2 object to be compared to
  * @return whether or not the entries of the two Z2s are equal
  */
-bool Z2::operator==(const int8_t &i) { return val[0] == i && val[1] == 0 && val[2] == 0; }
+bool Z2::operator==(const z2_int &i) { return val[0] == i && val[1] == 0 && val[2] == 0; }
 bool Z2::operator!=(const Z2 &other) const { return !(*this == other); }
 
 inline uint32_t Z2::as_uint32() const {
     // return int32_t((val[0] << 16)^(val[1] << 8 )^(val[2]));
     const uint32_t mask = 0x80'80'80'80;
-    uint8_t tmp[4];
+    uz2_int tmp[4];
     tmp[3] = 0;
     tmp[2] = val[0];
     tmp[1] = val[1];
@@ -219,13 +215,13 @@ bool Z2::operator<=(Z2 &other) { return !(*this > other); }
 //  * @param other reference to an integer
 //  * @return true if this < other and false otherwise
 //  */
-// bool Z2::operator<(const int8_t &i)
+// bool Z2::operator<(const z2_int &i)
 // {
 //     Z2 tmp = Z2(i, 0, 0);
 //     return *this < tmp;
 // }
 
-// bool Z2::operator>(const int8_t &i)
+// bool Z2::operator>(const z2_int &i)
 // {
 //     Z2 tmp = Z2(i, 0, 0);
 //     return *this > tmp;
@@ -236,7 +232,7 @@ bool Z2::operator<=(Z2 &other) { return !(*this > other); }
  * @param other reference to object make *this equal to
  * @return *this reference to this object which has been made equal to other
  */
-Z2 &Z2::operator=(const int8_t &other)
+Z2 &Z2::operator=(const z2_int &other)
 {
     val[0] = other;
     val[1] = 0;
