@@ -87,7 +87,7 @@ Z2 &Z2::operator-=(Z2 &other){
  * @param
  * @return negation of Z2
  */
-Z2 Z2::operator-() { 
+Z2 Z2::operator-() const { 
     Z2 ret = Z2(-val[0], -val[1], val[2]); 
     return ret;
 }
@@ -99,6 +99,21 @@ Z2 Z2::operator-() {
  */
 Z2 Z2::operator-(Z2 &other) { return -other + *this; }
 
+// /**
+//  * Overloads the * operator for Z2
+//  * @param other reference to Z2 object to be multiplied
+//  * @return
+//  */
+// Z2 Z2::operator*(const Z2 other)
+// {   
+//     return Z2(val[0] * other[0] + ((val[1] * other[1]) << 1), val[0] * other[1] + val[1] * other[0], val[2] + other[2]);
+//     // Z2 tmp = Z2(val[0] * other[0] + ((val[1] * other[1]) << 1), val[0] * other[1] + val[1] * other[0], val[2] + other[2]);
+//     // tmp.reduce();
+//     // if(val[0] == 0) return Z2(0,0,0);              // This check may not be necessary if we're careful
+//     // return tmp;
+// }
+
+
 /**
  * Overloads the * operator for Z2
  * @param other reference to Z2 object to be multiplied
@@ -108,6 +123,7 @@ Z2 Z2::operator*(const Z2 &other)
 {   
     return Z2(val[0] * other[0] + ((val[1] * other[1]) << 1), val[0] * other[1] + val[1] * other[0], val[2] + other[2]);
     // Z2 tmp = Z2(val[0] * other[0] + ((val[1] * other[1]) << 1), val[0] * other[1] + val[1] * other[0], val[2] + other[2]);
+    // tmp.reduce();
     // if(val[0] == 0) return Z2(0,0,0);              // This check may not be necessary if we're careful
     // return tmp;
 }
@@ -146,16 +162,16 @@ bool Z2::operator==(Z2 &other)
 bool Z2::operator==(const z2_int &i) { return val[0] == i && val[1] == 0 && val[2] == 0; }
 bool Z2::operator!=(const Z2 &other) const { return !(*this == other); }
 
-inline uint32_t Z2::as_uint32() const {
-    // return int32_t((val[0] << 16)^(val[1] << 8 )^(val[2]));
-    const uint32_t mask = 0x80'80'80'80;
-    uz2_int tmp[4];
-    tmp[3] = 0;
-    tmp[2] = val[0];
-    tmp[1] = val[1];
-    tmp[0] = val[2];
-    return *reinterpret_cast<uint32_t*>(&tmp) ^ mask;
-}
+// inline uint32_t Z2::as_uint32() const {
+//     // return int32_t((val[0] << 16)^(val[1] << 8 )^(val[2]));
+//     const uint32_t mask = 0x80'80'80'80;
+//     uz2_int tmp[4];
+//     tmp[3] = 0;
+//     tmp[2] = val[0];
+//     tmp[1] = val[1];
+//     tmp[0] = val[2];
+//     return *reinterpret_cast<uint32_t*>(&tmp) ^ mask;
+// }
 
 /**
  * @brief Overloads the < operator for Z2. This is similar to radix ordering. It DOES NOT return actual x < y, but rather compares term by term

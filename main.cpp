@@ -16,27 +16,98 @@
 #include <string>
 #include <fstream>
 #include <algorithm>
-#include <vector>
+#include <vector>  
+#include <math.h>
+#include <omp.h>
+#include <thread>
 #include "SO6.hpp"
-#include "pattern.hpp"
 #include <bitset>
+#include <filesystem>
 
 using namespace std;
 
-static uint8_t target_T_count;                  // Default target_T_count = 0
-static uint8_t numThreads = 1;                  // Default number of threads
-static bool saveResults = false;                // Turn on to save data
-static uint8_t stored_depth_max = 255;          // By default, you don't want to limit comparison depth
+static uint8_t target_T_count;         // Default target_T_count = 0
+static uint8_t THREADS = 3;            // Default number of threads
+static bool saveResults = false;       // Turn on to save data
+static uint8_t stored_depth_max = 255; // By default, you don't want to limit comparison depth
 static chrono::duration<double> timeelapsed;
-static SO6 search_token;                        // in case we're searching for something in particular
+static SO6 search_token; // in case we're searching for something in particular
 static bool verbose;
-static set<SO6> pattern_set;                    // will hold the set of patterns
-static std::string pattern_file = "";           // pattern file
-static set<SO6> explicit_search_set;            // Sets the matrices we're looking for
-static uint8_t explicit_search_depth = 0;       // 
+static set<pattern> pattern_set;          // will hold the set of patterns
+static std::string pattern_file = "";     // pattern file
+static set<SO6> explicit_search_set;      // Sets the matrices we're looking for
+static uint8_t explicit_search_depth = 0; //
 bool transpose_multiply = false;
 bool explicit_search_mode = false;
 static uint8_t free_multiply_depth = 1;
+static std::chrono::_V2::high_resolution_clock::time_point tcount_init_time;
+static omp_lock_t lock;
+static ofstream output_file;
+
+
+static void insert_all_permutations(pattern &p)
+{
+    pattern_set.insert(p);
+    int row[6] = {0, 1, 2, 3, 4, 5};
+    while (std::next_permutation(row, row + 6))
+    {
+        pattern tmp;
+        for (int c = 0; c < 6; c++)
+        {
+            for (int r = 0; r < 6; r++)
+                tmp.arr[c][r] = p.arr[c][row[r]];
+        }
+        tmp.lexicographic_order();
+        pattern_set.insert(tmp);
+    }
+
+    pattern p_transpose = p.transpose();
+
+    pattern_set.insert(p_transpose);
+
+    while (std::next_permutation(row, row + 6))
+    {
+        pattern tmp;
+        for (int c = 0; c < 6; c++)
+        {
+            for (int r = 0; r < 6; r++)
+                tmp.arr[c][r] = p_transpose.arr[c][row[r]];
+        }
+        tmp.lexicographic_order();
+        pattern_set.insert(tmp);
+    }
+}
+
+static void erase_all_permutations(pattern &pat)
+{
+    pattern_set.erase(pat);
+    int row[6] = {0, 1, 2, 3, 4, 5};
+    while (std::next_permutation(row, row + 6))
+    {
+        pattern tmp;
+        for (int c = 0; c < 6; c++)
+        {
+            for (int r = 0; r < 6; r++)
+                tmp.arr[c][r] = pat.arr[c][row[r]];
+        }
+        tmp.lexicographic_order();
+        pattern_set.erase(tmp);
+    }
+
+    pattern p_transpose = pat.transpose(); 
+    pattern_set.erase(p_transpose);
+    while (std::next_permutation(row, row + 6))
+    {
+        pattern tmp;
+        for (int c = 0; c < 6; c++)
+        {
+            for (int r = 0; r < 6; r++)
+                tmp.arr[c][r] = p_transpose.arr[c][row[r]];
+        }
+        tmp.lexicographic_order();
+        pattern_set.erase(tmp);
+    }
+}
 
 static void readPattern()
 {
@@ -63,31 +134,24 @@ static void readPattern()
                 line_in_binary[j] = 1;
                 j++;
             }
-            SO6 tmp;
-            pattern pat;
-            for (int col = 0; col < 6; col++)
-            {
-                for (int row = 0; row < 6; row++)
-                {
-                    int a = (int)line_in_binary[2 * col + 12 * row];
-                    pat.A[col][row] = line_in_binary[2 * col + 12 * row];
-                    int b = (int)line_in_binary[2 * col + 12 * row + 1];
-                    pat.B[col][row] = line_in_binary[2 * col + 12 * row];
-                    tmp[col][row] = Z2(a, b, 0);
-                }
-            }
-            tmp.lexOrder();
-            pattern_set.insert(tmp);
-            pattern_set.insert(tmp.pattern_mod());
-            tmp = tmp.transpose();
-            pattern_set.insert(tmp);
-            pattern_set.insert(tmp.pattern_mod());
+            pattern pat(line_in_binary);
+            pat.lexicographic_order();
+            insert_all_permutations(pat);
+            // pattern_set.insert(pat);
+            // pattern_set.insert(pat.pattern_mod());
+            // pat = pat.transpose();
+            // pattern_set.insert(pat.pattern_mod());
         }
-        SO6 identity = SO6::identity();
+        pf.close();
+        pattern identity = pattern::identity();
         pattern_set.erase(identity);
         pattern_set.erase(identity.pattern_mod());
-        pf.close();
     }
+}
+
+static std::chrono::_V2::high_resolution_clock::time_point now()
+{
+    return chrono::_V2::high_resolution_clock::now();
 }
 
 /// @brief This sets a matrix that we're looking for the pattern of
@@ -147,21 +211,33 @@ static void build_explicit_search_token()
             search_token[i][j].reduce();
         }
     }
-    search_token.lexOrder();
-    if(verbose) std::cout << "[Note:] We are searching for search_token=\n" << search_token << "\n";
+    search_token.lexicographic_order();
+    if (verbose)
+        std::cout << "[Note:] We are searching for search_token=\n"
+                  << search_token << "\n";
 }
 
 static void build_explicit_search_set(int depth)
 {
     explicit_search_set.insert(search_token);
-    for(int i = 0; i< depth; i++) {
+    for (int i = 0; i < depth; i++)
+    {
         set<SO6> tmp = explicit_search_set;
         for (SO6 curr : explicit_search_set)
         {
-            for(int l = 0; l<15;l++) tmp.insert(curr.left_multiply_by_T(l));
+            for (unsigned char l = 0; l < 15; l++)
+            {
+                SO6 C = curr.left_multiply_by_T_transpose(l);
+                tmp.insert(C);
+            }
         }
-        std::swap(explicit_search_set,tmp);
+        std::swap(explicit_search_set, tmp);
     }
+}
+
+std::vector<SO6> read_file_in_parallel() {
+    std::vector<SO6> ret;
+    return ret;
 }
 
 /**
@@ -188,15 +264,29 @@ static void setParameters(int argc, char **&argv)
         }
         if (strcmp(argv[i], "-pattern_file") == 0)
         {
-            pattern_file = argv[i+1];
-        }        
+            pattern_file = argv[i + 1];
+        }
         if (strcmp(argv[i], "-v") == 0)
         {
             verbose = true;
         }
         if (strcmp(argv[i], "-threads") == 0)
         {
-            numThreads = std::stoi(argv[i + 1]);
+            if (strcmp(argv[i + 1], "max") == 0)
+            {
+                THREADS = (uint)std::thread::hardware_concurrency();
+            }
+            else
+            {
+                if (std::stoi(argv[i + 1]) < 0)
+                {
+                    THREADS = std::thread::hardware_concurrency() + std::stoi(argv[i + 1]);
+                }
+                else
+                {
+                    THREADS = std::min(std::stoi(argv[i + 1]), (int)std::thread::hardware_concurrency());
+                }
+            }
         }
         if (strcmp(argv[i], "-save") == 0)
         {
@@ -204,86 +294,249 @@ static void setParameters(int argc, char **&argv)
         }
         if (strcmp(argv[i], "-transpose_multiply") == 0)
         {
-            transpose_multiply=true;
+            transpose_multiply = true;
         }
         if (strcmp(argv[i], "-explicit_search") == 0)
         {
-            explicit_search_mode=true;
-            explicit_search_depth= std::stoi(argv[i + 1]);
+            explicit_search_mode = true;
+            explicit_search_depth = std::stoi(argv[i + 1]);
         }
     }
+    std::cout << "[Config] Generating up to T=" << (int)target_T_count << "." << std::endl;
+    std::cout << "[Config] Storing at most T=" << (int)stored_depth_max << " in memory." << std::endl;
+    std::cout << "[Config] Running on " << (int)THREADS << " threads." << std::endl;
+    std::cout << "[Config] Pattern file " << pattern_file << std::endl;
 }
 
 /**
  * @brief Erases the pattern of an SO6 from pattern_set
  * @param s the SO6 to be erased
  */
-static void erase_pattern(SO6 &s) {
-    s = s.getPattern();
-    if(pattern_set.erase(s)) {
-        pattern_set.erase(s.pattern_mod());
-        s = s.transpose();
-        pattern_set.erase(s);
-        pattern_set.erase(s.pattern_mod());
-    }        
+static void erase_pattern(SO6 &s)
+{
+    pattern pat = s.to_pattern();
+    pat.lexicographic_order();
+    if(pattern_set.find(pat) == pattern_set.end() && !(pat == pattern::identity())) {
+        std::cout << pat;
+        int row[6] = {0, 1, 2, 3, 4, 5};
+        while (std::next_permutation(row, row + 6))
+        {
+            pattern tmp;
+            for (int c = 0; c < 6; c++)
+            {
+                for (int r = 0; r < 6; r++)
+                    tmp.arr[c][r] = pat.arr[c][row[r]];
+            }
+            tmp.lexicographic_order();
+            if(pattern_set.find(tmp)!=pattern_set.end()) std::cout << "here\n";
+        }
+        std::exit(0);
+    }
+    return;
+    
+    if (pattern_set.find(pat) != pattern_set.end())
+    {
+        omp_set_lock(&lock);
+        erase_all_permutations(pat);
+        // output_file << pat.name() << "\n";
+        // pattern_set.erase(pat);
+        // pattern_set.erase(pat.pattern_mod());
+        // pat = pat.transpose();
+        // pattern_set.erase(pat);
+        // pattern_set.erase(pat.pattern_mod());
+        omp_unset_lock(&lock);
+    }
 }
-
-
 
 /**
  * @brief Checks whether an SO6 is one that we are explicitly searching for
  * @param s the SO6 we're attempting to find
  */
-static void find_specific_matrix(SO6 &s) {
-    if (!explicit_search_mode) return;
-    if (explicit_search_set.find(s) != explicit_search_set.end()) {
+static void find_specific_matrix(SO6 &s)
+{
+    if (!explicit_search_mode)
+        return;
+    if (explicit_search_set.find(s) != explicit_search_set.end())
+    {
         SO6 found = *explicit_search_set.find(s);
-        std::cout << "\n[Break] Found the matrix we were looking for with name: " << s.printName() << "\n";
-        std::cout << "\n[Break] Generated from search_token by: " << found.printName() << "\n";
-        std::vector<uint8_t> hist = found.hist;
-        while(!hist.empty()) {
-            s = s.left_multiply_by_T_transpose(hist.back());
-            hist.pop_back();
+        std::cout << "\n[Break] Found the matrix we were looking for with name: " << SO6::name_as_num(s.name());
+        std::cout << "\n[Break] Generated from search_token by: " << SO6::name_as_num(found.name()) << "\n";
+        std::vector<unsigned char> hist = found.hist;
+        SO6 tmp = s;
+        std::reverse(hist.begin(),hist.end());
+        for (unsigned char i : hist)
+        {
+            if(i>15) {
+                s = s.left_multiply_by_T((i>>4)-1);
+            }
+            s = s.left_multiply_by_T((i & 15) -1);   
         }
-        if(s == search_token) {
-            std::cout << "[Break] Search_token has name: " << s.printName() << "\n[Break] Exiting." << std::endl;
+        if (s==search_token)
+        {
+            std::cout << "[Break] Search_token has name: " << SO6::name_as_num(s.name()) << "\n[Break] Exiting." << std::endl;
         }
-        std::exit(0);      
+        std::exit(0);
     }
 }
 
-static std::string time_since(std::chrono::_V2::high_resolution_clock::time_point &s) {
-    chrono::duration<double> duration = chrono::_V2::high_resolution_clock::now()-s;
+static std::string time_since(std::chrono::_V2::high_resolution_clock::time_point &s)
+{
+    chrono::duration<double> duration = now() - s;
     int64_t time = chrono::duration_cast<chrono::milliseconds>(duration).count();
-    if(time < 1000) return std::to_string(time).append("ms");
-    if(time < 60000) return std::to_string((float) time/1000).substr(0,5).append("s");
-    if(time < 3600000) return std::to_string((float) time/60000).substr(0,5).append("min");
-    if(time < 86400000) return std::to_string((float) time/3600000).substr(0,5).append("hr");
-    return std::to_string((float) time/86400000).substr(0,5).append("days");
+    if (time < 1000)
+        return std::to_string(time).append("ms");
+    if (time < 60000)
+        return std::to_string((float)time / 1000).substr(0, 5).append("s");
+    if (time < 3600000)
+        return std::to_string((float)time / 60000).substr(0, 5).append("min");
+    if (time < 86400000)
+        return std::to_string((float)time / 3600000).substr(0, 5).append("hr");
+    return std::to_string((float)time / 86400000).substr(0, 5).append("days");
 }
 
-static void configure() {
+static void configure()
+{
     stored_depth_max = std::min((int)target_T_count - 1, (int)stored_depth_max);
-    
+
     if (stored_depth_max < target_T_count / 2)
     { // Parameter check
         std::cout << "stored_depth bad\n";
         std::exit(EXIT_FAILURE);
     }
-    free_multiply_depth = target_T_count-stored_depth_max;
+    free_multiply_depth = target_T_count - stored_depth_max;
 
     // Load search criteria
-    if(!pattern_file.empty()) {
-        std::cout << "[S] Reading patterns from " << pattern_file << std::endl;
+    if (!pattern_file.empty())
+    {
+        std::cout << "[Read] Reading patterns from " << pattern_file << std::endl;
         readPattern();
-        std::cout << "[C] Loaded " << pattern_set.size() << " non-identity patterns." << std::endl;
+        std::cout << "[Finished] Loaded " << pattern_set.size() << " non-identity patterns." << std::endl;
     }
-    if(explicit_search_mode) {
+    if (explicit_search_mode)
+    {
         build_explicit_search_token();
-        std::cout << "[S] Generating lookup table for token=\n" << search_token;
+        std::cout << "[Start] Generating lookup table for token=\n"
+                  << search_token;
         build_explicit_search_set(explicit_search_depth);
-        std::cout << "[C] Lookup table contains " << explicit_search_set.size() << " unique SO6s." << std::endl;
+        std::cout << "[Finished] Lookup table contains " << explicit_search_set.size() << " unique SO6s." << std::endl;
     }
+}
+
+static void explore_tree_rooted_at(SO6 &S)
+{
+    set<SO6> prior, next, current = set<SO6>({S});
+    uint percent_complete;
+    uint64_t iteration_counter;
+    // for (int curr_T_count = 0; curr_T_count < stored_depth_max; curr_T_count++)
+    for (int curr_T_count = 0; curr_T_count < 4; curr_T_count++)
+    {
+        percent_complete = 0;
+        iteration_counter = 0;
+        tcount_init_time = now();
+        // std::cout << " ||\t[S] Beginning T=" << curr_T_count+1 << "\n ||\t[S] Processing .....    " << std::flush;
+
+        // Loop over all T matrices
+        for (SO6 S : current)
+        {
+            if ((int)100 * iteration_counter / current.size() - percent_complete > 1)
+            {
+                percent_complete = (int)100 * iteration_counter / current.size();
+                if (percent_complete > 9)
+                    std::cout << "\b";
+                std::cout << "\b\b" << percent_complete << "\%" << std::flush;
+            }
+            iteration_counter++;
+
+            // Multiply every element of curr by every T_i, might be faster if we looped over inside instead
+            for (uint T = 0; T < 15; T++)
+            {
+                SO6 toInsert = S.left_multiply_by_T(T);
+                if (next.insert(toInsert).second)
+                {
+                    erase_pattern(toInsert);
+                    if (transpose_multiply)
+                    {
+                        toInsert = S.left_multiply_by_T_transpose(T);
+                        if (next.insert(toInsert).second)
+                            erase_pattern(toInsert);
+                    }
+                    find_specific_matrix(toInsert);
+                }
+            }
+        }
+        // Report that we're done with the loop
+        //  std::cout << "\b\b\b100\%" << std::endl;
+
+        // Erase all elements that were repeated
+        for (SO6 P : prior)
+            next.erase(P);
+        prior.clear();
+        prior.swap(current); // T++
+        current.swap(next);  // T++
+        // std::cout << " ||\t↪ [FINISHED] Found " << current.size() << " new matrices in " << time_since(tcount_init_time) << "\n ||\t↪ [P] " << pattern_set.size() << " patterns remain.\n";
+    }
+}
+
+/**
+ * @brief Method to report the start of a T count iteration
+ * @param T the number of the current T count
+ */
+static void report_begin_T_count(const int T) {
+    std::cout << " ||\t[Start] Beginning T=" << T << "\n";
+    tcount_init_time = now();    
+}
+
+/**
+ * @brief Method to report percentage completed
+ * @param c current integer countr
+ * @param s total size
+ * @param percent_complete percent complete at previous iteration
+ */
+static void report_percent_complete(const int &c, const int s, uint &percent_complete)
+{
+    if (100 * c  >= (percent_complete+1)*s)
+    {
+        percent_complete = (int) 100 * c / s;                       // Update percent complete, can probably increment with ++
+        std::cout << "\033[A\r ||\t↪ [Progress] Processing .....    " << percent_complete << "\%" << "\n ||\t↪ [Patterns] " << pattern_set.size() << " patterns remain." << std::flush;
+        if(percent_complete == 100) std::cout << std::endl;
+        return;
+    }
+    if(c == 0) {
+        std::cout << " ||\t[Start] Processing .....    0\%" << "\n ||\t↪ [Patterns] " << pattern_set.size() << " patterns remain.";
+        return;
+    }
+}
+
+/**
+ * @brief Function to report completion
+ * @param matrices_found how many matrices were found 
+ */
+static void report_done(const uint &matrices_found) {
+    uint percent_complete = 99; // Any number < 100 is fine here.
+    report_percent_complete(1, 1, percent_complete);   
+    if(matrices_found != 0) std::cout << " ||\t↪ [Finished] Found " << matrices_found << " new matrices in " << time_since(tcount_init_time) << "\n ||\n";
+    else std::cout << " ||\t↪ [Finished] Total time: " << time_since(tcount_init_time) << "\n ||\n";
+}
+
+/**
+ * @brief This method converts a set of SO6s to a vector of SO6s without using up too much space in the process
+ * @param s origin set of type SO6
+ * @param v target vector of type SO6
+ */
+static void set_to_vector(std::set<SO6> &s, std::vector<SO6> &v)
+{
+    std::cout << "[Begin] Converting current to vector to_compute.\n";
+    // The following method could potentially be improved by impleminting increasingly large arrays, only necessary if we're really close to the memory limit
+    while (!s.empty())
+    {
+        v.push_back(*s.begin());
+        s.erase(s.begin());
+    }
+    v.shrink_to_fit(); // This vector will never grow again.
+
+    std::cout << "[Randomize] Shuffling vector for (possible) efficiency.\n";
+    std::random_shuffle(v.begin(), v.end()); // In principle, this guarantees that each thread has aboutan equal number of operations
+    std::cout << "[End] Done.\n" << std::endl;
 }
 
 /**
@@ -293,114 +546,191 @@ static void configure() {
  * @return 0
  */
 int main(int argc, char **argv)
-{
-    auto program_init_time = chrono::_V2::high_resolution_clock::now(); // Begin timekeeping
-    setParameters(argc, argv);  // Initialize parameters to command line argument
-    configure();                // Configure the search
+{   
+    // std::cout << tmp;
+    // tmp.lexicographic_order();
+    // std::cout << tmp;
+    // SO6 tmp2 = SO6::identity();
+    // tmp2 = tmp2.left_multiply_by_T(5).left_multiply_by_T(6);
+    // tmp2.lexicographic_order();
+    // std::cout << tmp2;
+    // std::cout << (tmp < tmp2) << "\n";
+    // std::cout << (tmp2 < tmp) << "\n";
+    // // // for(int i : tmp.permutation) std::cout << i << " ";
+    // // // std::cout << "\n";
+    // // SO6 tmp2 = tmp;
+    // // tmp.lexicographic_order();
+    // std::cout << (tmp2 < tmp) << "\n";
+    // std::cout << (tmp < tmp2) << "\n";
+    // std::exit(0);
+    // for(int i : tmp.permutation) std::cout << i << " ";
+    // std::cout << "\n";
+    // std::cout << tmp;
+    // std::exit(0);
 
-    int num_generating_sets = target_T_count - stored_depth_max;              // T count 1 can be done with .tMultiply
-    if(num_generating_sets>stored_depth_max-1) num_generating_sets=stored_depth_max-1;
+    // int arr[6] = {0,3,-1,1,2,0};
+    // int permutation[6] = {0,1,2,3,4,5};
+    // for (int i = 1; i < 6; i++)
+    // {
+    //     for (int j = i; j > 0 && arr[permutation[j]]<arr[permutation[j-1]]; j--)
+    //     {
+    //         // std::swap(arr[j], arr[j - 1]);
+    //         std::swap(permutation[j],permutation[j-1]);     // Permutation[i] = original column index now in position i
+    //     }
+    // }
+    // for(int i = 0; i < 6; i++) std::cout << arr[permutation[i]] << " ";
+    // std::cout << "\n";
+    // std::exit(0);
+    // srand(time(NULL));
+    // // for(int k =0; k<100000; k++) {
+    //     SO6 id = SO6::identity();
+    //     SO6 tmp = SO6::identity();
+    //     std::cout << id;
+    //     id = id.left_multiply_by_T(2).left_multiply_by_T(1);
+    //     id.lexicographic_order();
+    //     std::cout << id;
+    //     std::exit(0);
+    //     tmp = tmp.left_multiply_by_T_transpose(g0).left_multiply_by_T_transpose(g1).left_multiply_by_T_transpose(g2).left_multiply_by_T_transpose(g3);
+    //     tmp = tmp.left_multiply_by_T(g3).left_multiply_by_T(g2).left_multiply_by_T(g1).left_multiply_by_T(g0);
+    //     if(!(tmp == id)) {
+    //         std::cout << "here\n";
+    //         std::exit(0);
+    //     }
+    //     std::exit(0);
+        // for(int i = 0; i<10; i++) {
+        //     int g = 
+        //     tmp=tmp.left_multiply_by_T(g);
+    // }
+    //     std::cout << SO6::name_as_num(tmp.name());
+    //     SO6 test = SO6::reconstruct(tmp.name());
+    //     if(!(test == tmp)) {
+    //         std::cout << test;
+    //         std::cout << tmp;
+    //         for(unsigned char i : tmp.name()) {
+    //             std::cout << (uint) (i & 15) << " ";
+    //             if(i>15) std::cout << (uint) (i >> 4) << " ";
+    //         }
+    //         std::cout << "\n";
+    //         for(unsigned char i : test.name()) {
+    //             std::cout << (uint) (i & 15) << " ";
+    //             if(i>15) std::cout << (uint) (i >> 4) << " ";
+    //         }
+    //         std::cout << "\n";
+    //         std::exit(0);
+    //     }
+    // }
+    // std::exit(0);
 
-    set<SO6> prior;
-    set<SO6> current = set<SO6>({SO6::identity()});
-    set<SO6> next;
+    auto program_init_time = now(); // Begin timekeeping
+    setParameters(argc, argv);      // Initialize parameters to command line argument
+    configure();                    // Configure the search
+
+    int num_generating_sets = std::min(target_T_count - stored_depth_max, stored_depth_max - 1);
+
+    SO6 root = SO6::identity();
+    set<SO6> prior, next, current = set<SO6>({root});
 
     // This stores the generating sets. Note that the initial generating set is just the 15 T matrices and, thus, doesn't need to be stored
     std::vector<SO6> generating_set[num_generating_sets];
-    
+
     // Begin reporting non-brute-force T counts
     std::cout << "\n\n[Begin] Generating T=1 through T=" << (int)stored_depth_max << " iteratively, but will only save ";
-    if(free_multiply_depth == 2) std::cout << "T=2 and "; 
-    if(free_multiply_depth > 2) std::cout << "2≤T≤" << (int) free_multiply_depth << " and ";
+    if (free_multiply_depth == 2)
+        std::cout << "T=2 and ";
+    if (free_multiply_depth > 2)
+        std::cout << "2≤T≤" << (int)free_multiply_depth << " and ";
     std::cout << "T=" << (int)stored_depth_max << " in memory\n ||\n";
 
     uint percent_complete;
     uint64_t count;
-    std::chrono::_V2::high_resolution_clock::time_point tcount_init_time;
+
+    // std::filesystem::create_directory("./data");
+    std::string file_string;
     for (int curr_T_count = 0; curr_T_count < stored_depth_max; curr_T_count++)
     {
-        percent_complete = 0;
-        count = 0;
-        tcount_init_time = chrono::_V2::high_resolution_clock::now();
-        std::cout << " ||\t[S] Beginning T=" << curr_T_count+1 << "\n ||\t[S] Processing .....    " << std::flush;
-        
+        file_string = "./data/" + to_string(curr_T_count) + ".dat";
+        output_file.open(file_string, ios::out | ios::trunc);
+
+        report_begin_T_count(curr_T_count+1);
         // Loop over all T matrices
-        for (SO6 S : current)
+        // std::vector<SO6> iterate_over;
+        // iterate_over.reserve(current.size());
+        // for (SO6 S : current)
+        //     iterate_over.push_back(S);
+        percent_complete = 0;
+        int count = 0;
+        // for (int i = 0; i < iterate_over.size(); i++)
+        for(SO6 S : current)
         {
-            if((int) 100*count/current.size()-percent_complete > 4) {
-                percent_complete = (int) 100*count/current.size();
-                if(percent_complete > 9) std::cout << "\b";
-                std::cout << "\b\b" << percent_complete << "\%" << std::flush;
-            }
-            count++;
+            // SO6 S = iterate_over.at(i);
+            report_percent_complete(count++, current.size(), percent_complete);
 
             // Multiply every element of curr by every T_i, might be faster if we looped over inside instead
             for (int T = 0; T < 15; T++)
-            {   
+            {
                 SO6 toInsert = S.left_multiply_by_T(T);
-                if(next.insert(toInsert).second) {
-                    erase_pattern(toInsert);
-                    if(transpose_multiply) {
-                        toInsert = S.left_multiply_by_T_transpose(T);
-                        if(next.insert(toInsert).second) erase_pattern(toInsert);
-                    }
+                if (next.insert(toInsert).second)
+                { // The insertion operation appears to be the expensive part
+                    // if(pattern_set.find(toInsert.to_pattern()) == pattern_set.end()) {
+                    //     std::cout << toInsert.to_pattern();
+                    //     std::exit(0);
+                    // }
+                    erase_pattern(toInsert);            // Mildly inefficient, but okay.
                     find_specific_matrix(toInsert);
                 }
             }
         }
-        //Report that we're done with the loop
-        std::cout << "\b\b\b100\%" << std::endl;
-
         // Erase all elements that were repeated
-        for (SO6 P : prior) next.erase(P); 
+        for (SO6 P : prior) next.erase(P);
+
+        report_done(next.size());
+
+        // Shuffle storage around
         prior.clear();
         prior.swap(current); // T++
         current.swap(next);  // T++
-        std::cout << " ||\t↪ [C] Found " << current.size() << " new matrices in " << time_since(tcount_init_time) << "\n ||\t↪ [P] " << pattern_set.size() << " patterns remain.\n";
         
-        // save_to_generating_set(current, i-1);
-        // if((0 < curr_T_count && curr_T_count < free_multiply_depth) || curr_T_count == stored_depth_max-1) {
-        if((0 < curr_T_count && curr_T_count < free_multiply_depth)) {
-            int index = std::min(curr_T_count-1,num_generating_sets-1);
-            std::cout << " ||\t↪ [S] Saving as generating_set[" << index << "]\n";
-            for(SO6 curr : current) generating_set[index].push_back(curr);
+        if ((0 < curr_T_count && curr_T_count < free_multiply_depth))
+        {
+            int index = std::min(curr_T_count - 1, num_generating_sets - 1);
+            std::cout << " ||\t↪ [Save] Saving as generating_set[" << index << "]\n";
+            for (SO6 curr : current) {
+                generating_set[index].push_back(curr);
+                output_file << curr.name() << "\n";
+            }
         }
+        output_file.close();
     }
     prior.clear();
-    // current.clear();
     next.clear();
-    std::cout << " ||\n[End] Stored T=" << (int)stored_depth_max << " as generating_set[" << num_generating_sets-1<< "] to generate T=" << stored_depth_max + 1 << " through T=" << (int)target_T_count << "\n\n[Begin] Starting free multiply.\n ||\n";
-   
+    std::cout << " ||\n[End] Stored T=" << (int)stored_depth_max << " as current to generate T=" << stored_depth_max + 1 << " through T=" << (int)target_T_count << "\n\n";
+
+    std::vector<SO6> to_compute;
+    set_to_vector(current,to_compute);
+
+    std::cout << "[Begin] Starting free multiply.\n ||\n";
+    int set_size = to_compute.size();
+    int interval_size = std::ceil(set_size / THREADS); // Equally divide among threads, not sure how to balance but each should take about the same time
+
     for (int curr_T_count = 0; curr_T_count < target_T_count - stored_depth_max; curr_T_count++)
     {
-        // Bookkeeping
+        tcount_init_time = now();
         percent_complete = 0;
-        count = 0;
-        tcount_init_time = chrono::high_resolution_clock::now();
-        std::cout << " ||\t[S] Beginning T=" << (curr_T_count + stored_depth_max+1) << "\n ||\t[S] Processing .....  " << percent_complete << "\%" << std::flush;
+        std::cout << " ||\t[START] Beginning T=" << (curr_T_count + stored_depth_max + 1) << std::endl;
 
-        // Main loop
-        // for (int i = 0; i < generating_set[num_generating_sets-1].size(); i++) {
-        //     SO6 S = generating_set[num_generating_sets-1][i];
-        // Track completion in increments of 5%
-        // if((int) 100*i/generating_set[num_generating_sets-1].size()-percent_complete > 4) {
-        //     percent_complete = (int) 100*i/generating_set[num_generating_sets-1].size();
-        //     if(percent_complete > 9) std::cout << "\b";
-        //     std::cout << "\b\b" << percent_complete << "\%" << std::flush;
-        // }
-
-        for (SO6 S : current) {
-            // Track completion in increments of 5%
-            if((int) 100*count/current.size()-percent_complete > 4) {
-                percent_complete = (int) 100*count/current.size();
-                if(percent_complete > 9) std::cout << "\b";
-                std::cout << "\b\b" << percent_complete << "\%" << std::flush;
-            }
-            count++;
-
+        omp_init_lock(&lock);
+        #pragma omp parallel for schedule(static, interval_size) num_threads(THREADS)
+        for (int i = 0; i < set_size; i++)
+        {
+            SO6 S = to_compute.at(i); // Get current SO6
+            if (omp_get_thread_num() == THREADS - 1) 
+                report_percent_complete(i % interval_size, interval_size, percent_complete);
+                
             // Do T multiplication the standard way to generate the first depth
-            if(curr_T_count == 0) {
-                for(uint T = 0; T<15; T++) {
+            if (curr_T_count == 0)
+            {
+                for (uint T = 0; T < 15; T++)
+                {
                     SO6 tmp = S.left_multiply_by_T(T);
                     find_specific_matrix(tmp);
                     erase_pattern(tmp);
@@ -408,16 +738,23 @@ int main(int argc, char **argv)
                 continue;
             }
 
-            // Do multiplication by stored matrices
-            for(SO6 G : generating_set[curr_T_count-1]) {
-            // for(int it = 0; it<generating_set[curr_T_count-1].size(); it++) {
-                SO6 tmp = G*S;
-                find_specific_matrix(tmp);
-                erase_pattern(tmp);
+            // Do multiplication by stored matrices  ....... this could be bad?
+            for (SO6 G : generating_set[curr_T_count - 1])
+            {
+                SO6 N;
+                if(curr_T_count == 1) {
+                    N = S.left_multiply_by_circuit(G.hist);
+                } else {
+                    N = G*S;
+                }
+                find_specific_matrix(N);
+                erase_pattern(N);
             }
         }
-        std::cout << "\b\b\b100\%\n ||\t↪ [P] " << pattern_set.size() << " patterns remain.\n ||\t↪ [C] Completed in " << time_since(tcount_init_time) << "\n";
+        omp_destroy_lock(&lock);
+        report_done(0);
     }
-    std::cout << " ||\n[End] Free multiply complete.\n\n[Time] Total time elapsed: " << time_since(program_init_time) << "\n";
+    std::cout << " ||\n[FINISHED] Free multiply complete.\n\n[Time] Total time elapsed: " << time_since(program_init_time) << "\n";
+    output_file.close();
     return 0;
 }

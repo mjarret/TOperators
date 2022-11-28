@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include "SO6.hpp"
+// #include "pattern.hpp"
 
 /**
  * Method to compare two Z2 arrays of length 6 lexicographically
@@ -10,35 +11,77 @@
  * @param second array of Z2 of length 6
  * @return -1 if first < second, 0 if equal, 1 if first > second
  */
-bool lexicographical_less(Z2 *first, Z2 *second)
+int8_t SO6::lexicographical_compare(const Z2 first[6],const Z2 second[6])
 {
-    for (int i = 0; i < 6; i++)
+    bool first_is_negative = false;
+    bool second_is_negative = false;
+    int row;
+    for (row = 0; row < 6; row++)
     {
-        if (first[i] != second[i])
-            return second[i] < first[i]; // This "reversed" ordering guarantees identity displays normal
-    }
-    return false;
-}
-
-/**
- * @brief Method to avoid multiple calls to lexicographical_less when we need to lexicographically compare two strings
- * It doesn't seem like this will hit 0, since this only used when sorting, I think...
- *
- * @param first
- * @param second
- * @return int8_t
- */
-int8_t lexComp(const Z2 first[6], const Z2 second[6])
-{
-    for (int i = 0; i < 6; i++)
-    {
-        if (first[i] == second[i])
-            continue; // Presently, this is where we spend most of our time. I don't know how to make this any faster.
-        if (second[i] < first[i])
+        if (first[row][0] == 0) {
+            if(second[row][0] == 0) {
+                continue;
+            }
+            return 1;
+        }
+        if (second[row][0] == 0) {
             return -1;
+        }
+
+        // Now both first and second are nonzero
+        if (first[row] < Z2(0,0,0)) first_is_negative = true;
+        if (second[row] < Z2(0,0,0)) second_is_negative = true;
+        break;
+    }
+    
+    if(!first_is_negative) {
+        if(!second_is_negative) {
+        while (row < 6) {
+                if(first[row] == second[row]) {
+                    row++;
+                    continue;
+                }
+                if(second[row] < first[row]) return -1;
+                return 1;
+            }
+            return 0;
+        }
+        for (row; row < 6; row++)
+            {
+                if(first[row] == -second[row]) continue;
+                if(-second[row] < first[row]) return -1;
+                return 1;
+            }
+        return 0;
+    }
+    //first is negative now
+    if(!second_is_negative) {
+        for (row; row < 6; row++) {
+                if(-first[row] == second[row]) continue;
+                if(second[row] < -first[row]) return -1;
+                return 1;
+            }
+        return 0;
+    }
+
+    //both are negative
+    for (int i = row; i < 6; i++)    {
+        if(first[i] == second[i]) continue;
+        if(-second[i] < -first[i]) return -1;
         return 1;
     }
     return 0;
+}
+
+/**
+ * Method to compare two Z2 arrays of length 6 lexicographically
+ * @param first array of Z2 of length 6
+ * @param second array of Z2 of length 6
+ * @return -1 if first < second, 0 if equal, 1 if first > second
+ */
+bool SO6::lexicographical_less(const Z2 first[6],const Z2 second[6])
+{
+    return (SO6::lexicographical_compare(first,second)<0);
 }
 
 /**
@@ -46,20 +89,21 @@ int8_t lexComp(const Z2 first[6], const Z2 second[6])
  *
  */
 SO6::SO6()
-{
+{  
 }
 
-// /**
-//  * Constructor that initializes arbitrary matrix with arbitrary name
-//  * @param t the object history
-//  */
-// SO6::SO6(std::vector<int8_t> t){
-//     // for(int8_t i=0; i<6; i++){
-//     //     for(int8_t j=0; j<6; j++)
-//     //         arr[i][j]=Z2();
-//     // }
-//     // hist = t;
-// }
+/**
+ * Basic constructor. Initializes to other
+ *
+ */
+SO6::SO6(Z2 other[6][6])
+{
+    // for(int col =0; col<6; col++) {
+    //     for(int row=0; row <6; row++) {
+    //         arr[col][row]=other[col][row];
+    //     }
+    // }
+}
 
 // Something much faster than this would be a "multiply by T" method that explicitly does the matrix multiplication given a particular T matrix instead of trying to compute it naively
 
@@ -70,178 +114,156 @@ SO6::SO6()
  */
 SO6 SO6::operator*(SO6 &other)
 {
+
+    // The majority of the time in this computation is spent on the stupid history vector operations
+    // it takes about 5x longer than without it 
+
     // multiplies operators assuming COLUMN,ROW indexing
     SO6 prod;
-    // Compute product
+    prod.hist.resize(hist.size() + other.hist.size());
+    std::copy(other.hist.begin(),other.hist.end(),prod.hist.begin());
+    std::copy(hist.begin(),hist.end(),prod.hist.begin()+other.hist.size());
+
     for (int col = 0; col < 6; col++)
     {
         for (int row = 0; row < 6; row++)
-        {  
-            bool flag = false;
-            bool first = true;
+        { 
             for (int k = 0; k < 6; k++)
             {
-                if (arr[k][row][0] == 0 || other[col][k][0] == 0)
+                if ((this->unpermuted(k,row))[0] == 0 || (other.unpermuted(col,k))[0] == 0)
                     continue;                                 // Skip zeros
-                Z2 tmp = (arr[k][row] * other[col][k]); // This not transpose * other
+                Z2 tmp= ((this->unpermuted(k,row)) * other.unpermuted(col,k)); // This not transpose * other
                 prod[col][row] += tmp;
-                
-                // This will fix the sign inline
-                
-                // if(flag || (first && prod[col][row][0]<0)) {
-                //     flag = true;
-                //     prod[col][row].negate();
-                // }
-                // first = false;
             }
         }
     }
-    prod.lexOrder();
+    prod.lexicographic_order();
+    // std::cout<<((prod.reconstruct()) == prod) <<"\n";
+    // std::exit(0);
     return prod;
 }
 
 SO6 SO6::left_multiply_by_T(const int &i)
 {
     if (i < 5)
-        return left_multiply_by_T(0, i + 1,i);
+        return left_multiply_by_T(0, i + 1,(unsigned char) i+1);
     if (i < 9)
-        return left_multiply_by_T(1, i - 3,i);
+        return left_multiply_by_T(1, i - 3,(unsigned char) i+1);
     if (i < 12)
-        return left_multiply_by_T(2, i - 6,i);
+        return left_multiply_by_T(2, i - 6,(unsigned char) i+1);
     if (i < 14)
-        return left_multiply_by_T(3, i - 8,i);
-    return left_multiply_by_T(4, 5,i);
+        return left_multiply_by_T(3, i - 8,(unsigned char) i+1);
+    return left_multiply_by_T(4, 5,(unsigned char) i+1);
+}
+
+SO6 SO6::left_multiply_by_circuit(std::vector<unsigned char> &circuit)
+{
+    SO6 prod = *this;
+    for (unsigned char i : circuit)
+    {
+        prod = prod.left_multiply_by_T((i & 15) -1);  
+        if(i>15) {
+            prod = prod.left_multiply_by_T((i>>4)-1);
+        } 
+    }
+    return prod;
 }
 
 SO6 SO6::left_multiply_by_T_transpose(const int &i)
 {
     if (i < 5)
-        return left_multiply_by_T(i + 1,0,i+15);
+        return left_multiply_by_T(i + 1,0,(unsigned char) i+1);
     if (i < 9)
-        return left_multiply_by_T(i - 3,1,i+15);
+        return left_multiply_by_T(i - 3,1,(unsigned char) i+1);
     if (i < 12)
-        return left_multiply_by_T(i - 6,2,i+15);
+        return left_multiply_by_T(i - 6,2,(unsigned char) i+1);
     if (i < 14)
-        return left_multiply_by_T(i - 8,3,i+15);
-    return left_multiply_by_T(5,4,i+15);
+        return left_multiply_by_T(i - 8,3,(unsigned char) i+1);
+    return left_multiply_by_T(5,4,(unsigned char) i+1);
 }
 
-SO6 SO6::left_multiply_by_T(const int &i, const int &j, const int &p)
+SO6 SO6::left_multiply_by_T(const int &i, const int &j, const unsigned char &p)
 {
     SO6 prod = *this;
-    prod.hist.push_back(p); 
+
+    // This should be made into a method b/c right now it is highly managed
+    if(prod.hist.empty() || prod.hist.back()>15) {
+        prod.hist.reserve(prod.hist.size()+1);              // We will never need to grow beyond this size, so might as well just add the one char
+        prod.hist.push_back(p); 
+    } else {
+        prod.hist.back() = (prod.hist.back())^(p << 4);        
+    }
+
     // We are guaranteed that j > i by def of left_multiply_by_T
     for (int col = 0; col < 6; col++)
     {
-        prod[col][i] += arr[col][j];
+        prod[col][i] += (*this)[col][j];
         prod[col][i].increaseDE();
-        prod[col][j] -= arr[col][i];
+        prod[col][j] -= (*this)[col][i];
         prod[col][j].increaseDE();
     }
-    prod.lexOrder();
+    prod.lexicographic_order();
     return prod;
 }
 
-/**
- * @brief Sign fixing method, puts things in appropriate order
- */
-void SO6::fixSign()
-{
-    for (int col = 0; col < 6; col++)
-    {
-        for (int row = 0; row < 6; row++)
-        {
-            if (arr[col][row][0] == 0)
-                continue;
-            if (arr[col][row][0] < 0)
-            {
-                while (row < 6)
-                    arr[col][row++].negate();
-            }
-            else
-            {
-                break;
-            }
-        }
-    }
-}
-
 /// @brief This implements insertion sort
-void SO6::lexOrder()
+void SO6::lexicographic_order()
 {
-    fixSign();                                  // lex ordering requires fixing the sign, sort of
+    // Should be able to get rid of inverses just by only sorting the permutation and not the array, but was slower
+    // Is it possible to just have pointers to the original positions of the data and another set of pointers to the new positions?
+    uint8_t temp_perm[6];
+    for(int i=0;i<6;i++) temp_perm[permutation[i]]=i;
+
+    std::swap(permutation, temp_perm);
     for (int i = 1; i < 6; i++)
     {
-        for (int j = i; j > 0 && lexicographical_less(arr[j],arr[j-1]); j--)
+        for (int j = i; j > 0 && SO6::lexicographical_less((*this)[j],(*this)[j-1]); j--)
         {
             std::swap(arr[j], arr[j - 1]);
+            std::swap(permutation[j],permutation[j-1]);     // Permutation[i] = original column index now in position i
         }
     }
+    
+    for(int i=0;i<6;i++) temp_perm[permutation[i]]=i;   // permutation[i] = original column index now in position i       
+    std::swap(permutation, temp_perm);  // Permutation[i] = current position of col index i
 }
 
-std::string SO6::printName()
+std::string SO6::name()
 {
-    std::string ret = "";
-    // std::reverse(hist.begin(),hist.end());
-    for (uint8_t i : hist)
+    return std::string(hist.begin(),hist.end());
+}
+
+SO6 SO6::reconstruct(const std::string name) {
+    SO6 ret = SO6::identity();
+    for(unsigned char i : name)
     {
-        ret.append(std::to_string((int) i%15));
-        if(i > 14) ret.append("t");
-        ret.append(" ");
+        ret = ret.left_multiply_by_T((i & 15) -1);
+        if(i>15) ret = ret.left_multiply_by_T((i>>4)-1);
     }
-    // std::reverse(hist.begin(),hist.end());
+    ret.lexicographic_order();
     return ret;
 }
 
-/// @brief This implements an optimal sorting network. Somehow this is worse than insertion sort, despite (naively) having fewer total operations of the same types.
-// void SO6::lexOrder()
-// {
-//     if(lexicographical_less(arr[1],arr[0])) std::swap(arr[1],arr[0]);
-//     if(lexicographical_less(arr[3],arr[2])) std::swap(arr[3],arr[2]);
-//     if(lexicographical_less(arr[5],arr[4])) std::swap(arr[5],arr[4]);
-//     if(lexicographical_less(arr[2],arr[0])) std::swap(arr[2],arr[0]);
-//     if(lexicographical_less(arr[5],arr[3])) std::swap(arr[3],arr[5]);
-//     if(lexicographical_less(arr[4],arr[1])) std::swap(arr[1],arr[4]);
-//     if(lexicographical_less(arr[1],arr[0])) std::swap(arr[1],arr[0]);
-//     if(lexicographical_less(arr[3],arr[2])) std::swap(arr[3],arr[2]);
-//     if(lexicographical_less(arr[5],arr[4])) std::swap(arr[5],arr[4]);
-//     if(lexicographical_less(arr[2],arr[1])) std::swap(arr[2],arr[1]);
-//     if(lexicographical_less(arr[4],arr[3])) std::swap(arr[4],arr[3]);
-//     if(lexicographical_less(arr[3],arr[2])) std::swap(arr[3],arr[2]);
-// }
+std::string SO6::name_as_num(const std::string name) {
+    std::string ret;
+    for(unsigned char i : name)
+    {
+        ret.append(std::to_string((uint) ((i & 15) -1)) + " ");
+        if(i>15) ret.append(std::to_string((uint)((i>>4)-1)) + " ");
+    }
+    return ret;
+}
 
-// /// @brief This uses std::sort
-// void SO6::lexOrder() {
-//     Z2 *myZ2[] = {arr[0], arr[1], arr[2], arr[3], arr[4], arr[5]};  //List of pointers to data addresses
-//     std::vector<Z2 *> myvector(myZ2, myZ2 + 6);                     //Vector of pointers
-//     std::sort(myvector.begin(), myvector.end(), lexicographical_less);           //Sort the pointers
-//     Z2 arr2[6][6];
-//     for (int i = 0; i < 6; i++)
-//     {
-//         for (int j = 0; j < 6; j++)
-//         {
-//             arr2[i][j] = myvector.at(i)[j];                       //myvector.at(i) is a pointer to arr[x]
-//         }
-//     }
-//     for (int i = 0; i < 6; i++)
-//     {
-//         for (int j = 0; j < 6; j++)
-//         {
-//             arr[i][j] = arr2[i][j];
-//         }
-//     }
-// }
 
 bool SO6::operator<(const SO6 &other) const
 {
     for (int col = 0; col < 5; col++)
     { // There is no need to check the final column due to constraints
-        switch (lexComp((*this)[col], other[col]))
-        {
-        case -1:
-            return true;
-        case 1:
-            return false;
+        switch (lexicographical_compare((*this)[col], other[col])) {
+            case -1:
+                return true;
+            case 1:
+                return false;
         }
     }
     return false;
@@ -264,72 +286,48 @@ SO6 SO6::transpose() {
     SO6 ret;
     for(int col = 0; col<6; col++) {
         for(int row =0; row < 6; row++) {
-            ret[col][row] = arr[row][col];
+            (*this)[col][row] = (*this)[row][col];
         }
     }
-    // ret.lexOrder();
+    // ret.lexicographic_order();
     return ret;
 }
 
-void SO6::row_permute(int rows[6]) {
-    for(int col=0; col<6; col++) {
-        for(int i=0; i<6; i++) {
-            std::swap(arr[col][rows[i]],arr[col][i]);
-        }
-    }
-    lexOrder();
-}
+// void SO6::row_permute(int rows[6]) {
+//     for(int col=0; col<6; col++) {
+//         for(int i=0; i<6; i++) {
+//             std::swap(arr[col][rows[i]],arr[col][i]);
+//         }
+//     }
+//     lexicographic_order();
+// }
 
-SO6 SO6::getPattern()
+pattern SO6::to_pattern()
 {
-    SO6 ret;
+    pattern ret;
+    ret.hist = hist;
+
     int8_t lde = (*this).getLDE();
     for (int i = 0; i < 6; i++)
     {
         for (int j = 0; j < 6; j++)
         {
-            if (arr[i][j][2] < lde - 1)
-                continue;
-            if (arr[i][j][0] == 0)
-                continue;
-            if (arr[i][j][2] == lde)
-            {
-                ret[i][j] = Z2(1, arr[i][j][1] % 2, 0);
+            if (arr[i][j][2] < lde - 1 || arr[i][j][0]==0) {
                 continue;
             }
-            ret[i][j][1]++;
+            if (arr[i][j][2] == lde)
+            {
+                ret.arr[i][j].first = 1;
+                ret.arr[i][j].second = arr[i][j][1] % 2;
+                continue;
+            }
+            ret.arr[i][j].second = 1;
         }
     }
-    ret.lexOrder();
+    ret.lexicographic_order();
     return ret;
 }
 
-void SO6::to_pattern()
-{
-    int8_t lde = (*this).getLDE();
-    for (int i = 0; i < 6; i++)
-    {
-        for (int j = 0; j < 6; j++)
-        {
-            if (arr[i][j][2] < lde - 1) 
-            {   
-                arr[i][j][0] = 0;
-                arr[i][j][1] = 0;
-                arr[i][j][2] = 0;
-                continue;
-            }
-            if (arr[i][j][0] == 0)
-                continue;
-            if (arr[i][j][2] == lde)
-            {
-                arr[i][j] = Z2(1, arr[i][j][1] % 2, 0);
-                continue;
-            }
-            arr[i][j][1] = 1;
-        }
-    }
-    lexOrder();
-}
 
 /** overloads == method to check equality of SO6 matrices
  *  @param other reference to SO6 to be checked against
@@ -337,26 +335,43 @@ void SO6::to_pattern()
  */
 bool SO6::operator==(SO6 &other)
 {
-    for (int col = 5; col > -1; col--)
-    {
-        for (int row = 5; row > 5 - col - 1; row--)
-        {
-            if (arr[col][row] != other[col][row])
-                return false;
-        }
+    for(int col = 0; col < 5; col ++) {
+        if(lexicographical_compare((*this)[col],other[col])) return false;
     }
     return true;
+    // return !lexicographical_compare();
+    // for (int col = 5; col > -1; col--)
+    // {
+    //     for (int row = 5; row > 5 - col - 1; row--)
+    //     {
+    //         if (arr[col][row] != other[col][row])
+    //             return false;
+    //     }
+    // }
+    // return true;
 }
 
-SO6 SO6::pattern_mod() {
-    SO6 ret = getPattern();
+pattern SO6::pattern_mod() {
+    pattern ret = to_pattern();
     for (int col = 0; col < 6; col++) {
         for(int row = 0; row < 6; row++) {
-            if(ret[col][row][0] == 0) continue;
-            ret[col][row][1] = !ret[col][row][1]; 
+            if(ret.arr[col][row].first == 0) continue;
+            ret.arr[col][row].second = !ret.arr[col][row].second; 
         }
     }
-    ret.lexOrder();
+    ret.lexicographic_order();
+    return ret;
+}
+
+SO6 SO6::reconstruct() {
+    SO6 ret = SO6::identity();
+    for(unsigned char i : hist)
+    {
+        ret = ret.left_multiply_by_T((i & 15) -1);
+        if(i>15) ret = ret.left_multiply_by_T((i>>4)-1);
+    }
+    ret.hist = hist;
+    ret.lexicographic_order();
     return ret;
 }
 
@@ -405,4 +420,37 @@ std::ostream &operator<<(std::ostream &os, const SO6 &m)
     }
     os << "\n";
     return os;
+}
+
+/**
+ * Overloads << function for SO6.
+ * @param os reference to ostream object needed to implement <<
+ * @param m reference to SO6 object to be displayed
+ * @returns reference ostream with the matrix's display form appended
+ */
+void SO6::unpermuted_print()
+{
+    std::cout << "\n";
+    for (int row = 0; row < 6; row++)
+    {
+        if (row == 0)
+            std::cout << "⌈\t";
+        else if (row == 5)
+            std::cout << "⌊\t";
+        else
+            std::cout << "|\t";
+        for (int col = 0; col < 6; col++)
+            std::cout << (*this).unpermuted(col,row) << '\t';
+        if (row == 0)
+            std::cout << "\t⌉\n";
+        else if (row == 5)
+        {
+            std::cout << "\t⌋\n";
+        }
+        else
+        {
+            std::cout << "\t|\n";
+        }
+    }
+    std::cout << "\n";
 }
