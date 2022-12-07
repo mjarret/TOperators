@@ -66,6 +66,8 @@ void pattern::lexicographic_order() {
     }
 }
 
+/// @brief 
+/// @return 
 pattern pattern::pattern_mod() {
     pattern ret = *this;
     for (int col = 0; col < 6; col++) {
