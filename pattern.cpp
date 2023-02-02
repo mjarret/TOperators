@@ -18,6 +18,19 @@ pattern::pattern(const bool binary_rep[72]) {
     }
 }
 
+bool* pattern::to_binary() {
+    static bool binary_rep[72];
+    for (int col = 0; col < 6; col++)
+    {
+        for (int row = 0; row < 6; row++)
+        {
+            binary_rep[2 * col + 12 * row] = arr[col][row].first; 
+            binary_rep[2 * col + 12 * row + 1] = arr[col][row].second; 
+        }
+    }
+    return binary_rep;
+}
+
 bool pattern::operator==(const pattern &other) const {
     for(int col = 0; col < 6; col++) {
         for(int row = 0; row < 6; row++) {
@@ -41,8 +54,7 @@ bool pattern::operator<(const pattern &other) const {
 
 int8_t pattern::lexicographical_compare(const std::pair<bool,bool> first[6],const std::pair<bool,bool> second[6])
 {
-    int row;
-    for (row = 0; row < 6; row++)
+    for (int row = 0; row < 6; row++)
     {
         if (first[row] == second[row]) {
             continue;
@@ -134,7 +146,35 @@ std::string pattern::name()
     std::string ret = "";
     for (char i : hist)
     {
-        ret.append(std::to_string(i%15));
+        ret.append(1,i);
+    }
+    return ret;
+}
+
+// std::string pattern::human_readable() 
+// {
+//     std::string ret = "";
+//     bool* tmp = to_binary();
+//     for(int i=0; i<72; i+=2) {
+//         if(i%12 == 0) ret += "[";
+//         ret += std::to_string(tmp[i]) + " " + std::to_string(tmp[i+1]);
+//         if((i+2)%12 == 0) ret += "]";
+//         else ret += ",";
+//     }
+//     return ret;
+// }
+
+std::string pattern::human_readable() 
+{
+    std::string ret = "";
+    bool* tmp = to_binary();
+    for(int row=0; row<6; row++) {
+        ret+= "[";
+        for(int col=0; col<6; col++) {
+            ret += std::to_string(arr[col][row].first) + " " + std::to_string(arr[col][row].second);
+            if(col<5) ret += ",";
+        }
+        ret+= "]";
     }
     return ret;
 }
