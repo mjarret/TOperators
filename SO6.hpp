@@ -5,27 +5,43 @@
 
 class SO6{
     public:
+        std::vector<unsigned char> hist;
         SO6();
-        // SO6(std::vector<int8_t> t);
         SO6(Z2[6][6]); //initializes matrix according to a 6x6 array of Z2
-        SO6 operator*(SO6&); //mutliplication
-        void fixSign();
-        inline Z2& operator()(int col, int row){return arr[permutation[col]][row];} //returns the (i,j)th entry
+        
+        SO6 operator*(const SO6&) const; //mutliplication
+        Z2& operator()(int &col, int &row) {return arr[permutation[col]][row];} //returns the (i,j)th entry
         bool operator<(const SO6 &) const;
-        const Z2& operator()(int i, int j) const {return arr[permutation[i]][j];} //returns the (i,j)th entry but for const
         bool operator==(SO6&); //checking equality up to signed permutation
         bool operator==(const SO6 &) const;
-        // Z2* operator[](const int i) {return arr[permutation[i]];}  // Return the array element needed. 
-        Z2* operator[](const int i) {return arr[i];}  // Return the array element needed. 
-        Z2 unpermuted(const int i, const int j) {return arr[permutation[i]][j];}  // Return the array element needed. 
-        // const Z2* operator[](const int i) const {return arr[permutation[i]];}  // Return the array element needed. 
-        const Z2* operator[](const int i) const {return arr[i];}  // Return the array element needed. 
-        SO6 left_multiply_by_T(const int &);
+        bool operator!=(const SO6 &other) const;
+        Z2* operator[](const int &i) {return arr[i];}  // Return the array element needed. 
+        const Z2* operator[](const int &i) const {return arr[i];}  // Return the array element needed. 
+        friend std::ostream& operator<<(std::ostream&,const SO6&); //display
+
+        Z2 unpermuted(const int &i, const int &j) const {return arr[permutation[i]][j];}  // Return the array element needed. 
+        SO6 left_multiply_by_T(const int &) const;
         SO6 left_multiply_by_circuit(std::vector<unsigned char> &);
-        SO6 left_multiply_by_T(const int &,const int &,const unsigned char &);
+        SO6 left_multiply_by_T(const int &,const int &,const unsigned char &) const;
         SO6 left_multiply_by_T_transpose(const int &);        
         void genLDE(); //generates LDE, called after multiplication and constructor
-        friend std::ostream& operator<<(std::ostream&,const SO6&); //display
+
+        z2_int getLDE();
+        pattern to_pattern();
+        SO6 reconstruct();
+        SO6 transpose();
+        std::string name(); 
+        std::string circuit_string(); 
+        
+        
+        void row_permute(int *);
+        void unpermuted_print();
+        void lexicographic_order();
+
+        static SO6 reconstruct(const std::string);
+        static std::string name_as_num(const std::string);
+        static int8_t lexicographical_compare(const Z2[6],const Z2[6]);
+        static bool lexicographical_less(const Z2[6],const Z2[6]);
         static const SO6 identity() {
             SO6 I;
             for(int k =0; k<6; k++) {
@@ -33,26 +49,8 @@ class SO6{
             }
             return I;
         }
-        z2_int getLDE();
-        pattern to_pattern();
-        pattern pattern_mod();
-        SO6 reconstruct();
-        static SO6 reconstruct(const std::string);
-        SO6 transpose();
-        std::string name(); 
-        static std::string name_as_num(const std::string);
-        void row_permute(int *);
-        void unpermuted_print();
-        std::vector<unsigned char> hist;
-        static int8_t lexicographical_compare(const Z2[6],const Z2[6]);
-        static bool lexicographical_less(const Z2[6],const Z2[6]);
-        void lexicographic_order();
-        Z2 arr[6][6];
-        uint8_t permutation[6] = {0,1,2,3,4,5};
-        struct gate {
-            char first : 4;
-            char second : 4;
-        };
+
     private:
-        
+        uint8_t permutation[6] = {0,1,2,3,4,5};
+        Z2 arr[6][6];
 };

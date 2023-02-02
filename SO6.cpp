@@ -112,7 +112,7 @@ SO6::SO6(Z2 other[6][6])
  * @param other reference to SO6 to be multiplied with (*this)
  * @return matrix multiplication of (*this) and other
  */
-SO6 SO6::operator*(SO6 &other)
+SO6 SO6::operator*(const SO6 &other) const
 {
 
     // The majority of the time in this computation is spent on the stupid history vector operations
@@ -120,30 +120,33 @@ SO6 SO6::operator*(SO6 &other)
 
     // multiplies operators assuming COLUMN,ROW indexing
     SO6 prod;
+
+    // eliminating this next routine would save about 20 percent
     prod.hist.resize(hist.size() + other.hist.size());
     std::copy(other.hist.begin(),other.hist.end(),prod.hist.begin());
     std::copy(hist.begin(),hist.end(),prod.hist.begin()+other.hist.size());
 
-    for (int col = 0; col < 6; col++)
+    for (int row = 0; row < 6; row++)
     {
-        for (int row = 0; row < 6; row++)
-        { 
-            for (int k = 0; k < 6; k++)
-            {
-                if ((this->unpermuted(k,row))[0] == 0 || (other.unpermuted(col,k))[0] == 0)
-                    continue;                                 // Skip zeros
-                Z2 tmp= ((this->unpermuted(k,row)) * other.unpermuted(col,k)); // This not transpose * other
-                prod[col][row] += tmp;
+        for (int k = 0; k < 6; k++)
+        {
+            const Z2& left_element = (this->unpermuted(k,row));
+            if (left_element[0] == 0) continue;    
+            for (int col = 0; col < 6; col++)
+            { 
+                if((other.unpermuted(col,k))[0] == 0) continue;
+                prod[col][row] += (left_element * other.unpermuted(col,k)); 
             }
         }
     }
-    prod.lexicographic_order();
-    // std::cout<<((prod.reconstruct()) == prod) <<"\n";
-    // std::exit(0);
+    // prod.lexicographic_order(); // This is no longer useful to us, I think
     return prod;
 }
 
-SO6 SO6::left_multiply_by_T(const int &i)
+/// @brief Left multiply this by a T operator
+/// @param i the index of T_i
+/// @return the result T_i * this
+SO6 SO6::left_multiply_by_T(const int &i) const
 {
     if (i < 5)
         return left_multiply_by_T(0, i + 1,(unsigned char) i+1);
@@ -156,6 +159,9 @@ SO6 SO6::left_multiply_by_T(const int &i)
     return left_multiply_by_T(4, 5,(unsigned char) i+1);
 }
 
+/// @brief left multiply this by a circuit
+/// @param circuit circuit listed as a compressed vector of gates
+/// @return the result circuit * this
 SO6 SO6::left_multiply_by_circuit(std::vector<unsigned char> &circuit)
 {
     SO6 prod = *this;
@@ -182,12 +188,12 @@ SO6 SO6::left_multiply_by_T_transpose(const int &i)
     return left_multiply_by_T(5,4,(unsigned char) i+1);
 }
 
-SO6 SO6::left_multiply_by_T(const int &i, const int &j, const unsigned char &p)
+SO6 SO6::left_multiply_by_T(const int &i, const int &j, const unsigned char &p) const
 {
     SO6 prod = *this;
 
     // This should be made into a method b/c right now it is highly managed
-    if(prod.hist.empty() || prod.hist.back()>15) {
+    if(hist.empty() || hist.back()>15) {
         prod.hist.reserve(prod.hist.size()+1);              // We will never need to grow beyond this size, so might as well just add the one char
         prod.hist.push_back(p); 
     } else {
@@ -210,7 +216,7 @@ SO6 SO6::left_multiply_by_T(const int &i, const int &j, const unsigned char &p)
 void SO6::lexicographic_order()
 {
     // Should be able to get rid of inverses just by only sorting the permutation and not the array, but was slower
-    // Is it possible to just have pointers to the original positions of the data and another set of pointers to the new positions?
+    // For whatever reason this approach is faster than simply moving pointers
     uint8_t temp_perm[6];
     for(int i=0;i<6;i++) temp_perm[permutation[i]]=i;
 
@@ -254,6 +260,15 @@ std::string SO6::name_as_num(const std::string name) {
     return ret;
 }
 
+std::string SO6::circuit_string() {
+    std::string ret;
+    for(unsigned char i : hist)
+    {
+        ret.append(std::to_string((int) ((i & 15) -1)) + " ");
+        if(i>15) ret.append(std::to_string((int)((i>>4)-1)) + " ");
+    }
+    return ret;
+}
 
 bool SO6::operator<(const SO6 &other) const
 {
@@ -286,21 +301,12 @@ SO6 SO6::transpose() {
     SO6 ret;
     for(int col = 0; col<6; col++) {
         for(int row =0; row < 6; row++) {
-            (*this)[col][row] = (*this)[row][col];
+            ret[col][row] = (*this)[row][col];
         }
     }
-    // ret.lexicographic_order();
+    ret.lexicographic_order();
     return ret;
 }
-
-// void SO6::row_permute(int rows[6]) {
-//     for(int col=0; col<6; col++) {
-//         for(int i=0; i<6; i++) {
-//             std::swap(arr[col][rows[i]],arr[col][i]);
-//         }
-//     }
-//     lexicographic_order();
-// }
 
 pattern SO6::to_pattern()
 {
@@ -339,28 +345,18 @@ bool SO6::operator==(SO6 &other)
         if(lexicographical_compare((*this)[col],other[col])) return false;
     }
     return true;
-    // return !lexicographical_compare();
-    // for (int col = 5; col > -1; col--)
-    // {
-    //     for (int row = 5; row > 5 - col - 1; row--)
-    //     {
-    //         if (arr[col][row] != other[col][row])
-    //             return false;
-    //     }
-    // }
-    // return true;
 }
 
-pattern SO6::pattern_mod() {
-    pattern ret = to_pattern();
-    for (int col = 0; col < 6; col++) {
-        for(int row = 0; row < 6; row++) {
-            if(ret.arr[col][row].first == 0) continue;
-            ret.arr[col][row].second = !ret.arr[col][row].second; 
-        }
+bool SO6::operator==(const SO6 &other) const
+{
+    for(int col = 0; col < 5; col ++) {
+        if(lexicographical_compare((*this)[col],other[col])) return false;
     }
-    ret.lexicographic_order();
-    return ret;
+    return true;
+}
+
+bool SO6::operator!=(const SO6 &other) const {
+    return !(*this==other);
 }
 
 SO6 SO6::reconstruct() {

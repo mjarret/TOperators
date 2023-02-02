@@ -13,8 +13,8 @@ public:
     inline const z2_int& operator[](z2_int i) const{return val[i];} //does the same but for const Z2
     inline uint32_t as_uint32() const;
     Z2 operator+(Z2&); //handles addition
-    Z2& operator+=(Z2&); //handles +=
-    Z2& operator-=(Z2&); //handles -=
+    Z2& operator+=(const Z2&); //handles +=
+    Z2& operator-=(const Z2&); //handles -=
     Z2 operator-() const; //handles negation
     Z2 operator-(Z2&); //handles subtraction
     bool operator<(const z2_int&);
@@ -25,7 +25,7 @@ public:
     bool operator>=(Z2&);
     // Z2 operator*(const Z2); //function that handles multiplication
     // Z2 operator*(Z2&); //function that handles multiplication
-    Z2 operator*(const Z2&); //function that handles multiplication
+    Z2 operator*(const Z2&) const; //function that handles multiplication
     bool operator==(const Z2&) const; //function that checks equality between two Z2
     bool operator==(Z2&);
     bool operator==(const z2_int&); //function that checks equality between two Z2

@@ -26,6 +26,8 @@
 
 using namespace std;
 
+
+// Global variables
 static uint8_t target_T_count;         // Default target_T_count = 0
 static uint8_t THREADS = 3;            // Default number of threads
 static bool saveResults = false;       // Turn on to save data
@@ -90,19 +92,6 @@ static void insert_all_permutations(pattern &p)
         pattern_set.insert(tmp);
     }
 
-
-    // p_mod = p.transpose().pattern_mod();
-    // while (std::next_permutation(row, row + 6))
-    // {
-    //     pattern tmp;
-    //     for (int c = 0; c < 6; c++)
-    //     {
-    //         for (int r = 0; r < 6; r++)
-    //             tmp.arr[c][r] = p_mod.arr[c][row[r]];
-    //     }
-    //     tmp.lexicographic_order();
-    //     pattern_set.insert(tmp);
-    // }
 }
 
 static void erase_all_permutations(pattern &pat)
@@ -163,7 +152,24 @@ static void erase_all_permutations(pattern &pat)
     // }
 }
 
-static void readPattern()
+/// @brief Reads dat file and prints string of gates circuit
+/// @param file_name 
+static void read_dat(std::string file_name)
+{
+    std::string line;
+    std::ifstream file(file_name);
+    if (file.is_open())
+    {
+        while (getline(file, line))
+        {
+            SO6 s = SO6::reconstruct(line);
+            std::cout << SO6::name_as_num(s.name()) << "\n";
+        }
+    }
+}
+
+/// @brief Reads patterns from human-readable pattern-file and converts to patterns
+static void read_pattern()
 {
     string line;
     ifstream pf(pattern_file);
@@ -417,11 +423,6 @@ static void erase_pattern(SO6 &s)
         omp_set_lock(&lock);
         output_file << pat.name() << std::endl;
         erase_all_permutations(pat);
-        // if(pat.name().length() > 3) {
-        //     std::cout << pat.name() << "\n";
-        //     // SO6 tmp = SO6::reconstruct(pat.name());
-        //     // std::cout << tmp;
-        // }
         omp_unset_lock(&lock);
     }
 }
@@ -487,7 +488,7 @@ static void configure()
     if (!pattern_file.empty())
     {
         std::cout << "[Read] Reading patterns from " << pattern_file << std::endl;
-        readPattern();
+        read_pattern();
         std::cout << "[Finished] Loaded " << pattern_set.size() << " non-identity patterns." << std::endl;
     }
     if (explicit_search_mode)
@@ -699,6 +700,8 @@ int main(int argc, char **argv)
     std::vector<SO6> to_compute;
     set_to_vector(current,to_compute);
 
+
+    // Note to self, we should turn off lexicographic sorting for this part
     std::cout << "[Begin] Beginning brute force multiply.\n ||" << std::endl;
     uint64_t set_size = to_compute.size();
     uint64_t interval_size = std::ceil(set_size / THREADS); // Equally divide among threads, not sure how to balance but each should take about the same time
@@ -718,7 +721,7 @@ int main(int argc, char **argv)
         for (uint64_t i = 0; i < set_size; i++)
         {
             // if(percent_complete >= 1) continue;
-            SO6 S = to_compute.at(i); // Get current SO6
+            const SO6 &S = to_compute.at(i); // Get current SO6
             if (omp_get_thread_num() == THREADS - 1)
                 report_percent_complete(i % interval_size, interval_size, percent_complete);
 
@@ -726,15 +729,15 @@ int main(int argc, char **argv)
             if (curr_T_count == stored_depth_max)
             {
                 SO6 tmp = S.left_multiply_by_T(0);
-                find_specific_matrix(tmp);
+                // find_specific_matrix(tmp);
                 erase_pattern(tmp);
                 continue;
             }
 
-            for (SO6 G : generating_set[curr_T_count-stored_depth_max - 1])
+            for (const SO6 &G : generating_set[curr_T_count-stored_depth_max - 1])
             {
                 SO6 N = G*S;
-                find_specific_matrix(N);
+                // find_specific_matrix(N);
                 erase_pattern(N);
             }
         }

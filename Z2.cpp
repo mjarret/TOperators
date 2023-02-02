@@ -46,7 +46,7 @@ Z2 Z2::operator+(Z2 &other)
  * @param other reference to Z2 object to be added to *this
  * @return *this reference to this object, onto which other has been added
  */
-Z2 &Z2::operator+=(Z2 &other)
+Z2 &Z2::operator+=(const Z2 &other)
 {
     // 0 cases are the only cases where a=even and Z2 is reduced, so screen them out    
     if(other[0]==0) return *this;
@@ -77,8 +77,8 @@ Z2 &Z2::operator+=(Z2 &other)
     return *this;
 }
 
-Z2 &Z2::operator-=(Z2 &other){
-    *this = *this - other;
+Z2 &Z2::operator-=(const Z2 &other){
+    *this += -other;
     return *this;
 }
 
@@ -88,8 +88,7 @@ Z2 &Z2::operator-=(Z2 &other){
  * @return negation of Z2
  */
 Z2 Z2::operator-() const { 
-    Z2 ret = Z2(-val[0], -val[1], val[2]); 
-    return ret;
+    return Z2(-val[0], -val[1], val[2]); 
 }
 
 /**
@@ -119,7 +118,7 @@ Z2 Z2::operator-(Z2 &other) { return -other + *this; }
  * @param other reference to Z2 object to be multiplied
  * @return
  */
-Z2 Z2::operator*(const Z2 &other)
+Z2 Z2::operator*(const Z2 &other) const
 {   
     return Z2(val[0] * other[0] + ((val[1] * other[1]) << 1), val[0] * other[1] + val[1] * other[0], val[2] + other[2]);
     // Z2 tmp = Z2(val[0] * other[0] + ((val[1] * other[1]) << 1), val[0] * other[1] + val[1] * other[0], val[2] + other[2]);
