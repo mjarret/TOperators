@@ -92,6 +92,14 @@ pattern pattern::pattern_mod() {
     return ret;
 }
 
+void pattern::mod_row(const int &row) {
+    for (int col = 0; col < 6; col++) {
+        if(this->arr[col][row].first == 0) continue;
+        this->arr[col][row].second = !this->arr[col][row].second; 
+    }
+}
+
+
 pattern pattern::transpose() {
     pattern ret = *this;
     for (int col = 0; col < 6; col++) {

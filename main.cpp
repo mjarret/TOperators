@@ -53,46 +53,63 @@ static void insert_all_permutations(pattern &p)
     int row[6] = {0, 1, 2, 3, 4, 5};
     while (std::next_permutation(row, row + 6))
     {
-        pattern tmp;
+
+        // First, insert the permutation from the original matrix
+        pattern perm_of_orig;
         for (int c = 0; c < 6; c++)
         {
             for (int r = 0; r < 6; r++)
-                tmp.arr[c][r] = p.arr[c][row[r]];
+                perm_of_orig.arr[c][r] = p.arr[c][row[r]];
         }
-        tmp.lexicographic_order();
-        pattern_set.insert(tmp);
+        perm_of_orig.lexicographic_order();
+        pattern_set.insert(perm_of_orig);
+
+        // Now insert all things that are off by mult 1+sqrt(2)
+        // Probably much more efficient to do this outside of this routine
+        // Not sure that it matters, though.
+        for(unsigned int counter = 0; counter < 64; counter++) {
+            pattern mod_of_perm = perm_of_orig;
+            for(int j = 0; j < 6; j++) {
+                if(counter & (1 << j)) {
+                    mod_of_perm.mod_row(j);
+                }
+            }
+            mod_of_perm.lexicographic_order();
+            pattern_set.insert(mod_of_perm);
+        }
     }
 
-    // pattern p_mod = p.pattern_mod();
+
+    // Insert the transposes, just one transpose now
+    pattern p_transpose = p.transpose();
+    pattern_set.insert(p_transpose);
+
     // while (std::next_permutation(row, row + 6))
     // {
     //     pattern tmp;
     //     for (int c = 0; c < 6; c++)
     //     {
     //         for (int r = 0; r < 6; r++)
-    //             tmp.arr[c][r] = p_mod.arr[c][row[r]];
+    //             tmp.arr[c][r] = p_transpose.arr[c][row[r]];
     //     }
     //     tmp.lexicographic_order();
     //     pattern_set.insert(tmp);
     // }
-
-    pattern p_transpose = p.transpose();
-
-    pattern_set.insert(p_transpose);
-
-    while (std::next_permutation(row, row + 6))
-    {
-        pattern tmp;
-        for (int c = 0; c < 6; c++)
-        {
-            for (int r = 0; r < 6; r++)
-                tmp.arr[c][r] = p_transpose.arr[c][row[r]];
-        }
-        tmp.lexicographic_order();
-        pattern_set.insert(tmp);
-    }
-
 }
+
+// static void insert_all_mods(pattern &p)
+// {
+//     // Create a counter to choose a row to modify
+//     pattern tmp = p;
+//     for(unsigned int counter = 0; counter < 64; counter++) {
+//         for(int j = 0; j < 6; j++) {
+//             if(counter & (1 << j)) {
+//                 tmp.mod_row(j);
+//             }
+//         }
+//     }
+//     pattern_set.insert(tmp);
+// }
 
 static void erase_all_permutations(pattern &pat)
 {
@@ -100,15 +117,29 @@ static void erase_all_permutations(pattern &pat)
     int row[6] = {0, 1, 2, 3, 4, 5};
     while (std::next_permutation(row, row + 6))
     {
-        pattern tmp;
+        pattern perm_of_orig;
         for (int c = 0; c < 6; c++)
         {
             for (int r = 0; r < 6; r++)
-                tmp.arr[c][r] = pat.arr[c][row[r]];
+                perm_of_orig.arr[c][r] = pat.arr[c][row[r]];
         }
-        tmp.lexicographic_order();
-        pattern_set.erase(tmp);
+        perm_of_orig.lexicographic_order();
+        pattern_set.erase(perm_of_orig);
+
+        // Now erase all things that are off by identity
+        for(unsigned int counter = 0; counter < 64; counter++) {
+            pattern mod_of_perm = perm_of_orig;
+            for(int j = 0; j < 6; j++) {
+                if(counter & (1 << j)) {
+                    mod_of_perm.mod_row(j);
+                }
+            }
+            mod_of_perm.lexicographic_order();
+            pattern_set.erase(mod_of_perm);
+        }
     }
+
+
 
     // pattern pat_mod = pat.pattern_mod();
     // pattern_set.erase(pat_mod);
@@ -124,19 +155,32 @@ static void erase_all_permutations(pattern &pat)
     //     pattern_set.erase(tmp);
     // }
 
-    pattern p_transpose = pat.transpose();
-    pattern_set.erase(p_transpose);
-    while (std::next_permutation(row, row + 6))
-    {
-        pattern tmp;
-        for (int c = 0; c < 6; c++)
-        {
-            for (int r = 0; r < 6; r++)
-                tmp.arr[c][r] = p_transpose.arr[c][row[r]];
-        }
-        tmp.lexicographic_order();
-        pattern_set.erase(tmp);
-    }
+    // pattern p_transpose = pat.transpose();
+    // pattern_set.erase(p_transpose);
+    // The following block is turned off, but I still don't understand why
+    // while (std::next_permutation(row, row + 6))
+    // {
+    //     pattern perm_of_orig;
+    //     for (int c = 0; c < 6; c++)
+    //     {
+    //         for (int r = 0; r < 6; r++)
+    //             perm_of_orig.arr[c][r] = p_transpose.arr[c][row[r]];
+    //     }
+    //     perm_of_orig.lexicographic_order();
+    //     pattern_set.erase(perm_of_orig);
+
+    //     // Now erase all things that are off by identity
+    //     for(unsigned int counter = 0; counter < 64; counter++) {
+    //         pattern mod_of_perm = perm_of_orig;
+    //         for(int j = 0; j < 6; j++) {
+    //             if(counter & (1 << j)) {
+    //                 mod_of_perm.mod_row(j);
+    //             }
+    //         }
+    //         mod_of_perm.lexicographic_order();
+    //         pattern_set.erase(mod_of_perm);
+    //     }
+    // }
 
     // pat_mod = p_transpose.pattern_mod();
     // while (std::next_permutation(row, row + 6))
@@ -152,27 +196,13 @@ static void erase_all_permutations(pattern &pat)
     // }
 }
 
-/// @brief Reads dat file and prints string of gates circuit
-/// @param file_name 
-static void read_dat(std::string file_name)
-{
-    std::string line;
-    std::ifstream file(file_name);
-    if (file.is_open())
-    {
-        while (getline(file, line))
-        {
-            SO6 s = SO6::reconstruct(line);
-            std::cout << SO6::name_as_num(s.name()) << "\n";
-        }
-    }
-}
+
 
 /// @brief Reads patterns from human-readable pattern-file and converts to patterns
 static void read_pattern()
 {
     string line;
-    ifstream pf(pattern_file);
+    std::ifstream pf(pattern_file);
     if (pf.is_open())
     {
         while (getline(pf, line))
@@ -384,46 +414,34 @@ static void setParameters(int argc, char **&argv)
 static void erase_pattern(SO6 &s)
 {
     pattern pat = s.to_pattern();
-    // pat.lexicographic_order();
-    // if(pattern_set.find(pat) == pattern_set.end() && !(pat == pattern::identity())) {
-    //     std::cout << pat;
-    //     int row[6] = {0, 1, 2, 3, 4, 5};
-    //     while (std::next_permutation(row, row + 6))
-    //     {
-    //         pattern tmp;
-    //         for (int c = 0; c < 6; c++)
-    //         {
-    //             for (int r = 0; r < 6; r++)
-    //                 tmp.arr[c][r] = pat.arr[c][row[r]];
-    //         }
-    //         tmp.lexicographic_order();
-    //         if(pattern_set.find(tmp)!=pattern_set.end()) std::cout << "here\n";
-    //     }
-
-    //     pattern p2 = pat.pattern_mod();
-    //     while (std::next_permutation(row, row + 6))
-    //     {
-    //         pattern tmp;
-    //         for (int c = 0; c < 6; c++)
-    //         {
-    //             for (int r = 0; r < 6; r++)
-    //                 tmp.arr[c][r] = p2.arr[c][row[r]];
-    //         }
-    //         tmp.lexicographic_order();
-    //         if(pattern_set.find(tmp)!=pattern_set.end()) std::cout << "here\n";
-    //     }
-
-
-    //     std::exit(0);
-    // }
-    // return;
-
     if (pattern_set.find(pat) != pattern_set.end())
     {
         omp_set_lock(&lock);
-        output_file << pat.name() << std::endl;
-        erase_all_permutations(pat);
+        // Double check to prevent collision.
+        if(pattern_set.find(pat) != pattern_set.end()) {
+            erase_all_permutations(pat);
+            output_file << s.circuit_string() << std::endl;
+        }
         omp_unset_lock(&lock);
+    }
+}
+
+/// @brief Reads dat file and prints string of gates circuit
+/// @param file_name 
+static void read_dat(std::string file_name)
+{
+    std::string line;
+    std::ifstream file(file_name);
+    if (file.is_open())
+    {
+        while (getline(file, line))
+        {
+            SO6 s = SO6::reconstruct(line);
+            // std::cout << SO6::name_as_num(s.name()) << "\n";
+            std::cout << "current size: " << pattern_set.size() << "\n";
+            erase_pattern(s);
+            std::cout << s.circuit_string() << "\n";
+        }
     }
 }
 
@@ -568,7 +586,7 @@ static void report_begin_T_count(const int T) {
  */
 static void report_percent_complete(const uint64_t &c, const uint64_t s, uint &percent_complete)
 {
-    if (std::floor((100 * c)/s)  > percent_complete)
+    if (std::floor((100 * c)/s)  > percent_complete || c==s)
     {
         percent_complete = 100 * c / s;                       // Update percent complete, can probably increment with ++
         std::cout << "\033[A\r ||\t↪ [Progress] Processing .....    " << percent_complete << "\%" << "\n ||\t↪ [Patterns] " << pattern_set.size() << " patterns remain." << std::flush;
@@ -629,6 +647,9 @@ int main(int argc, char **argv)
 
     SO6 root = SO6::identity();
     set<SO6> prior, next, current = set<SO6>({root});
+    // read_dat("./data/10.dat");
+
+    // std::exit(0);
 
     // This stores the generating sets. Note that the initial generating set is just the 15 T matrices and, thus, doesn't need to be stored
     std::vector<SO6> generating_set[num_generating_sets];
@@ -711,7 +732,7 @@ int main(int argc, char **argv)
         percent_complete = 0;
         report_begin_T_count(curr_T_count+1);
         file_string = "./data/" + to_string(curr_T_count+1) + ".dat";
-        std::cout << " ||\t↪ [Save] Opening file " << file_string << std::endl;
+        std::cout << " ||\t↪ [Save] Opening file " << file_string << std::endl; 
         output_file.open(file_string, ios::out | ios::trunc);
 
         if (curr_T_count != stored_depth_max) std::cout << " ||\t↪ [Rep] Using generating_set[" << curr_T_count-stored_depth_max-1 << "]" << std::endl;

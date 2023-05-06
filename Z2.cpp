@@ -179,13 +179,7 @@ bool Z2::operator!=(const Z2 &other) const { return !(*this == other); }
  */
 bool Z2::operator<(const Z2 &other) const
 {
-    // return as_uint32() < other.as_uint32();
-
-    // return as_int32() < other.as_int32();
-    // return std::lexicographical_compare(val,val+2,other.val,other.val+2);
-    // int32_t tmp = (val[0]<<16)^(val[1]<<8)^val[2];
-    // int32_t tmp2 = (other[0]<<16)^(other[1]<<8)^(other[2]);
-    // return tmp < tmp2;
+    // return std::tie(val[0], val[1], val[2]) < std::tie(other.val[0], other.val[1], other.val[2]);
     if(val[0]<other[0]) 
         return true;
     if(val[0]==other[0]) 
@@ -198,49 +192,13 @@ bool Z2::operator<(const Z2 &other) const
         }
     }
     return false;
-    /**
-     *  This used to compare term by term as below 
-     */
-    // int k = std::max(val[2], other[2]);
-    // int a = val[0] << (k - val[2]);
-    // int b = val[1] << (k - val[2]);
-    // a -= (other[0] << (k - other[2]));
-    // b -= (other[1] << (k - other[2]));
-    // if (a < 0)
-    // {
-    //     if (b <= 0) return true;        // a<0 and b<=0 means that diff < 0
-    //     a *= a;                         // compute a^2
-    //     b = (b * b) << 1;               // compute 2b^2
-    //     if (a > b) return true;         // a<0, b>0, and a^2 > 2 b^2 implies that a+sqrt(2)b <0
-    //     return false;                   // a<0, b>0, and a^2 <= 2 b^2 implies that a+sqrt(2)b >= 0
-    // }
-    // if (b >= 0) return false;           // a>=0 and b>=0 means that diff >=0
-    // a *= a;                             // compute a^2
-    // b = (b * b) << 1;                   // compute 2b^2
-    // if (a < b) return true;             // a>0, b<0, and a^2 < 2b^2 implies that a + sqrt(2) b < 0
-    // return false;                       // a>0, b<0, and a^2 >= 2b^2 implies that a+sqrt(2)b >= 0
 }
 
 bool Z2::operator>(Z2 &other) { return (other < *this); }
 bool Z2::operator>=(Z2 &other) { return !(*this < other); }
 bool Z2::operator<=(Z2 &other) { return !(*this > other); }
 
-// /**
-//  * Overloads the < operator for Z2
-//  * @param other reference to an integer
-//  * @return true if this < other and false otherwise
-//  */
-// bool Z2::operator<(const z2_int &i)
-// {
-//     Z2 tmp = Z2(i, 0, 0);
-//     return *this < tmp;
-// }
-
-// bool Z2::operator>(const z2_int &i)
-// {
-//     Z2 tmp = Z2(i, 0, 0);
-//     return *this > tmp;
-// }
+/
 
 /**
  * Overloads the = operator for Z2
@@ -269,7 +227,7 @@ Z2 &Z2::operator=(const z2_int &other)
  */
 Z2 &Z2::operator=(const Z2 &other)
 {
-    // assigns an operator
+    // // assigns an operator
     val[0] = other[0];
     val[1] = other[1];
     val[2] = other[2];
