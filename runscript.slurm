@@ -7,11 +7,12 @@
 ##                     all-LoPri, bigmem-LoPri, gpuq  (5 days limit)
 ## Restricted: CDS_q, CS_q, STATS_q, HH_q, GA_q, ES_q, COS_q  (10 day limit)
 #SBATCH --partition=bigmem
+##SBATCH --partition=normal
 
 ## Separate output and error messages into 2 files.`
 ## NOTE: %u=userID, %x=jobName, %N=nodeID, %j=jobID, %A=arrayID, %a=arrayTaskID`
-#SBATCH --output=/scratch/%u/%x-%N-%j.out  # Output file`
-#SBATCH --error=/scratch/%u/%x-%N-%j.err   # Error file`
+#SBATCH --output=/scratch/%u/%j.out  # Output file`
+#SBATCH --error=/scratch/%u/%j.err   # Error file`
 
 ## Slurm can send you updates via email
 #SBATCH --mail-type=BEGIN,END,FAIL         # ALL,NONE,BEGIN,END,FAIL,REQUEUE,..
@@ -19,12 +20,18 @@
 
 ## Specify how much memory your job needs. (2G is the default)
 #SBATCH --mem=4084000MB        # Total memory needed per task (units: K,M,G,T)
+##SBATCH --mem=128G
 
 ## Specify how much time your job needs. (default: see partition above)
 #SBATCH --time=5-00:00  # Total time needed for job: Days-Hours:Minutes
 
+## Specify number CPUs
+##SBATCH --cpus-per-task 128
+#SBATCH --nodes=1 --exclusive
 
 ## Load the relevant modules needed for the job
 
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
 ## Run your program or script
-/scratch/mjarretb/TOperators/main.out -tcount 11 -stored_depth 10 -pattern_file /scratch/mjarretb/TOperators/patterns.txt
+/scratch/mjarretb/TOperators/main.out -tcount 16 -stored_depth 9 -pattern_file /scratch/mjarretb/TOperators/patterns.txt -threads max

@@ -18,7 +18,18 @@ pattern::pattern(const bool binary_rep[72]) {
     }
 }
 
-bool* pattern::to_binary() {
+pattern::pattern(const std::string &binary_string) {
+    bool binary_rep[72] = {0}; // Array representing binary pattern
+    int index = 0; // Index for binaryArray
+
+    for (char digit : binary_string)
+    {
+        binary_rep[index++] = (digit == '1'); // Convert char to boolean
+    }
+    *this = pattern(binary_rep);
+}
+
+const bool* pattern::to_binary() const{
     static bool binary_rep[72];
     for (int col = 0; col < 6; col++)
     {
@@ -175,7 +186,7 @@ std::string pattern::name()
 std::string pattern::human_readable() 
 {
     std::string ret = "";
-    bool* tmp = to_binary();
+    const bool* tmp = to_binary();
     for(int row=0; row<6; row++) {
         ret+= "[";
         for(int col=0; col<6; col++) {

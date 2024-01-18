@@ -2,6 +2,7 @@
 #include <vector>
 #include "Z2.hpp"
 #include "pattern.hpp"
+#include "History.hpp"
 
 class SO6{
     public:
@@ -10,7 +11,6 @@ class SO6{
         SO6(Z2[6][6]); //initializes matrix according to a 6x6 array of Z2
         
         SO6 operator*(const SO6&) const; //mutliplication
-        Z2& operator()(int &col, int &row) {return arr[permutation[col]][row];} //returns the (i,j)th entry
         bool operator<(const SO6 &) const;
         bool operator==(SO6&); //checking equality up to signed permutation
         bool operator==(const SO6 &) const;
@@ -24,7 +24,6 @@ class SO6{
         SO6 left_multiply_by_circuit(std::vector<unsigned char> &);
         SO6 left_multiply_by_T(const int &,const int &,const unsigned char &) const;
         SO6 left_multiply_by_T_transpose(const int &);        
-        void genLDE(); //generates LDE, called after multiplication and constructor
 
         z2_int getLDE();
         pattern to_pattern();
@@ -33,6 +32,7 @@ class SO6{
         std::string name(); 
         std::string circuit_string(); 
         
+        void update_history(const unsigned char &); 
         
         void row_permute(int *);
         void unpermuted_print();
@@ -45,7 +45,7 @@ class SO6{
         static const SO6 identity() {
             SO6 I;
             for(int k =0; k<6; k++) {
-                I(k,k) = 1;
+                I[k][k] = 1;
             }
             return I;
         }

@@ -1,12 +1,22 @@
+#ifndef PATTERN_HPP
+#define PATTERN_HPP
+
+#include <iostream>
+#include <vector>
+#include <utility> // For std::pair
+#include <functional> // For std::hash
 
 class pattern{
     public:
         pattern();
         pattern(const bool[72]);
+        pattern(const std::string &);
+
         void lexicographic_order();
         pattern pattern_mod();
+        void mod_row(const int &);
         pattern transpose();
-        bool* to_binary();
+        const bool* to_binary() const;
 
         bool operator==(const pattern &) const;
         bool operator<(const pattern &) const;
@@ -29,3 +39,24 @@ class pattern{
 
     private:
 };
+
+namespace std {
+    template <>
+    struct hash<pattern> {
+        size_t operator()(const pattern& p) const {
+            // Assuming p.to_binary() returns an array of 72 booleans
+            const bool* binaryArray = p.to_binary();
+            
+            // Calculate the hash value based on the binaryArray
+            size_t hashValue = 0;
+            for (int i = 0; i < 64; i++) {
+                hashValue = (hashValue << 1) | binaryArray[i];
+            }
+            
+            return hashValue;
+        }
+    };
+}
+
+
+#endif

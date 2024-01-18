@@ -1,4 +1,6 @@
 #include <iostream>
+#include <iomanip>  // For std::setw
+#include <sstream>
 #include <stdint.h>
 #include <vector>
 #include <algorithm>
@@ -7,6 +9,7 @@
 
 /**
  * Method to compare two Z2 arrays of length 6 lexicographically
+ * we are given the guarantee that the first nonzero element in the row is non-negative
  * @param first array of Z2 of length 6
  * @param second array of Z2 of length 6
  * @return -1 if first < second, 0 if equal, 1 if first > second
@@ -16,6 +19,11 @@ int8_t SO6::lexicographical_compare(const Z2 first[6],const Z2 second[6])
     bool first_is_negative = false;
     bool second_is_negative = false;
     int row;
+
+    // We search for the first nonzero row of first and if on the way we encounter a nonzero row of second, 
+    // we immediately claim second is larger. If both are nonzero, we compare them
+    // the goal is to "fix" the sign convention of the row so that the entire
+    // column is sorted such that the top element is positive by multiplying everything by -1
     for (row = 0; row < 6; row++)
     {
         if (first[row][0] == 0) {
@@ -29,11 +37,14 @@ int8_t SO6::lexicographical_compare(const Z2 first[6],const Z2 second[6])
         }
 
         // Now both first and second are nonzero
-        if (first[row] < Z2(0,0,0)) first_is_negative = true;
-        if (second[row] < Z2(0,0,0)) second_is_negative = true;
+        first_is_negative = first[row].is_negative();
+        second_is_negative = second[row].is_negative();
+        // if (first[row] < Z2(0,0,0)) first_is_negative = true;
+        // if (second[row] < Z2(0,0,0)) second_is_negative = true;
         break;
     }
-    
+
+    // compare remaining rows until return
     if(!first_is_negative) {
         if(!second_is_negative) {
         while (row < 6) {
@@ -114,17 +125,13 @@ SO6::SO6(Z2 other[6][6])
  */
 SO6 SO6::operator*(const SO6 &other) const
 {
-
-    // The majority of the time in this computation is spent on the stupid history vector operations
-    // it takes about 5x longer than without it 
-
     // multiplies operators assuming COLUMN,ROW indexing
     SO6 prod;
 
-    // eliminating this next routine would save about 20 percent
-    prod.hist.resize(hist.size() + other.hist.size());
-    std::copy(other.hist.begin(),other.hist.end(),prod.hist.begin());
-    std::copy(hist.begin(),hist.end(),prod.hist.begin()+other.hist.size());
+    // let's see what happens if i turn of history printing
+    prod.hist.reserve(hist.size() + other.hist.size());  // Reserve instead of resize
+    std::copy(other.hist.begin(), other.hist.end(), std::back_inserter(prod.hist));
+    std::copy(hist.begin(), hist.end(), std::back_inserter(prod.hist));
 
     for (int row = 0; row < 6; row++)
     {
@@ -159,6 +166,7 @@ SO6 SO6::left_multiply_by_T(const int &i) const
     return left_multiply_by_T(4, 5,(unsigned char) i+1);
 }
 
+
 /// @brief left multiply this by a circuit
 /// @param circuit circuit listed as a compressed vector of gates
 /// @return the result circuit * this
@@ -188,19 +196,38 @@ SO6 SO6::left_multiply_by_T_transpose(const int &i)
     return left_multiply_by_T(5,4,(unsigned char) i+1);
 }
 
+void SO6::update_history(const unsigned char &p) {
+    // Check if we need to start a new history entry
+    if (hist.empty() || (hist.back() & 0xF0) != 0) {
+        hist.reserve(hist.size() + 1);  // Reserve space for one more element
+        hist.push_back(p);              // Add the new entry
+    } else {
+        // Pack the new entry into the higher 4 bits of the last byte
+        hist.back() |= (p << 4);
+    }
+}
+
+/**
+ * @brief Performs a left multiplication of this SO(6) matrix by a specific T matrix.
+ *
+ * This function multiplies the current SO(6) matrix by a T matrix identified by 
+ * indices `i` and `j` and updates its internal state based on the parameter `p`. 
+ * The operation is row-dependent and independent of the matrix's initial permutation.
+ * The resulting matrix is reordered in lexicographic order and returned as a new SO6 object.
+ *
+ * @param i The first index for the T matrix (row index), integral part of specifying the T matrix.
+ * @param j The second index for the T matrix (row index), must be greater than `i`.
+ * @param p An unsigned char value used to index Tₚ
+ * @return SO6 The product of the multiplication, returned as a new SO6 object.
+ *
+ * @note The function ensures that `j` is always greater than `i`, which is essential for
+ *       defining the specific T matrix multiplication. The lexicographic ordering of the
+ *       resulting matrix is maintained.
+ */
 SO6 SO6::left_multiply_by_T(const int &i, const int &j, const unsigned char &p) const
 {
     SO6 prod = *this;
 
-    // This should be made into a method b/c right now it is highly managed
-    if(hist.empty() || hist.back()>15) {
-        prod.hist.reserve(prod.hist.size()+1);              // We will never need to grow beyond this size, so might as well just add the one char
-        prod.hist.push_back(p); 
-    } else {
-        prod.hist.back() = (prod.hist.back())^(p << 4);        
-    }
-
-    // We are guaranteed that j > i by def of left_multiply_by_T
     for (int col = 0; col < 6; col++)
     {
         prod[col][i] += (*this)[col][j];
@@ -209,29 +236,27 @@ SO6 SO6::left_multiply_by_T(const int &i, const int &j, const unsigned char &p) 
         prod[col][j].increaseDE();
     }
     prod.lexicographic_order();
+    prod.update_history(p);
     return prod;
 }
 
 /// @brief This implements insertion sort
 void SO6::lexicographic_order()
 {
-    // Should be able to get rid of inverses just by only sorting the permutation and not the array, but was slower
-    // For whatever reason this approach is faster than simply moving pointers
-    uint8_t temp_perm[6];
-    for(int i=0;i<6;i++) temp_perm[permutation[i]]=i;
-
-    std::swap(permutation, temp_perm);
     for (int i = 1; i < 6; i++)
     {
-        for (int j = i; j > 0 && SO6::lexicographical_less((*this)[j],(*this)[j-1]); j--)
+        int j = i;
+        while (j > 0 && SO6::lexicographical_less(arr[j], arr[j - 1]))
         {
-            std::swap(arr[j], arr[j - 1]);
-            std::swap(permutation[j],permutation[j-1]);     // Permutation[i] = original column index now in position i
+            // Swap the actual Z2 arrays in-place
+            for (int k = 0; k < 6; k++)
+                std::swap(arr[j][k], arr[j - 1][k]);
+
+            // Swap the corresponding indices in the permutation array
+            std::swap(permutation[j], permutation[j - 1]);
+            j--;
         }
     }
-    
-    for(int i=0;i<6;i++) temp_perm[permutation[i]]=i;   // permutation[i] = original column index now in position i       
-    std::swap(permutation, temp_perm);  // Permutation[i] = current position of col index i
 }
 
 std::string SO6::name()
@@ -241,8 +266,7 @@ std::string SO6::name()
 
 SO6 SO6::reconstruct(const std::string name) {
     SO6 ret = SO6::identity();
-    for(unsigned char i : name)
-    {
+    for(unsigned char i : name) {
         ret = ret.left_multiply_by_T((i & 15) -1);
         if(i>15) ret = ret.left_multiply_by_T((i>>4)-1);
     }
@@ -262,13 +286,40 @@ std::string SO6::name_as_num(const std::string name) {
 
 std::string SO6::circuit_string() {
     std::string ret;
-    for(unsigned char i : hist)
-    {
-        ret.append(std::to_string((int) ((i & 15) -1)) + " ");
-        if(i>15) ret.append(std::to_string((int)((i>>4)-1)) + " ");
+    for (unsigned char byte : hist) {
+        int lower = (byte & 15) - 1;  // Lower 4 bits
+        ret.append(std::to_string(lower) + " ");
+
+        // Check for upper 4 bits
+        if (byte > 15) {
+            int upper = (byte >> 4) - 1;  // Upper 4 bits
+            ret.append(std::to_string(upper) + " ");
+        }
     }
     return ret;
 }
+
+std::vector<unsigned char> invert_circuit_string(const std::string& input) {
+    std::vector<unsigned char> hist;
+    std::istringstream iss(input);
+    int lower, upper;
+
+    while (iss >> lower) {
+        lower += 1;  // Reverse the subtraction of 1 for the lower 4 bits
+        unsigned char byte = static_cast<unsigned char>(lower & 15);
+
+        // Check if there's an upper part
+        if (iss >> upper) {
+            upper += 1;  // Reverse the subtraction of 1 for the upper 4 bits
+            byte |= static_cast<unsigned char>((upper & 15) << 4);
+        }
+
+        hist.push_back(byte);
+    }
+
+    return hist;
+}
+
 
 bool SO6::operator<(const SO6 &other) const
 {
@@ -311,23 +362,24 @@ SO6 SO6::transpose() {
 pattern SO6::to_pattern()
 {
     pattern ret;
+    ret.hist.reserve(hist.size());
     ret.hist = hist;
 
-    int8_t lde = (*this).getLDE();
-    for (int i = 0; i < 6; i++)
+    int8_t lde = getLDE();
+    for (int col = 0; col < 6; col++)
     {
-        for (int j = 0; j < 6; j++)
+        for (int row = 0; row < 6; row++)
         {
-            if (arr[i][j][2] < lde - 1 || arr[i][j][0]==0) {
+            if (arr[col][row][2] < lde - 1 || arr[col][row][0]==0) {
                 continue;
             }
-            if (arr[i][j][2] == lde)
+            if (arr[col][row][2] == lde)
             {
-                ret.arr[i][j].first = 1;
-                ret.arr[i][j].second = arr[i][j][1] % 2;
+                ret.arr[col][row].first = 1;
+                ret.arr[col][row].second = arr[col][row][1] % 2;
                 continue;
             }
-            ret.arr[i][j].second = 1;
+            ret.arr[col][row].second = 1;
         }
     }
     ret.lexicographic_order();
@@ -371,82 +423,66 @@ SO6 SO6::reconstruct() {
     return ret;
 }
 
-// Don't think this works
-//  bool SO6::opral induction is likely the correct proof technique here...)ower right triangle seems super fast, but can try out others
-//      for (int col = 5; col > -1; col--)
-//      {
-//          for (int row = 5; row > 5 - col - 1; row--)
-//          {
-//              if (arr[col][row] < other[col][row] || other[col][row] < arr[col][row])
-//                  return false;
-//          }
-//      }
-//      return true;
-//  }
-
 /**
  * Overloads << function for SO6.
  * @param os reference to ostream object needed to implement <<
  * @param m reference to SO6 object to be displayed
  * @returns reference ostream with the matrix's display form appended
  */
-std::ostream &operator<<(std::ostream &os, const SO6 &m)
-{
-    os << "\n";
-    for (int row = 0; row < 6; row++)
-    {
-        if (row == 0)
-            os << "⌈\t";
-        else if (row == 5)
-            os << "⌊\t";
-        else
-            os << "|\t";
-        for (int col = 0; col < 6; col++)
-            os << m[col][row] << '\t';
-        if (row == 0)
-            os << "\t⌉\n";
-        else if (row == 5)
-        {
-            os << "\t⌋\n";
-        }
-        else
-        {
-            os << "\t|\n";
+std::ostream &operator<<(std::ostream &os, const SO6 &m) {
+    int maxWidth = 0;
+
+    // Find the maximum width of the elements
+    for (int row = 0; row < 6; row++) {
+        for (int col = 0; col < 6; col++) {
+            std::stringstream ss;
+            ss << m[col][row];
+            maxWidth = std::max(maxWidth, static_cast<int>(ss.str().length()));
         }
     }
+
+    const int width = maxWidth + 2; // Adjust the width by adding 2
+
     os << "\n";
+    for (int row = 0; row < 6; row++) {
+        std::string leftBorder = (row == 0) ? "⌈" : ((row == 5) ? "⌊" : "|");
+        std::string rightBorder = (row == 0) ? "⌉" : ((row == 5) ? "⌋" : "|");
+
+        os << leftBorder << "\t";
+        for (int col = 0; col < 6; col++) {
+            os << std::setw(width) << m[col][row];
+        }
+        os << "\t" << rightBorder << "\n";
+    }
+    os << "\n";
+
     return os;
 }
 
-/**
- * Overloads << function for SO6.
- * @param os reference to ostream object needed to implement <<
- * @param m reference to SO6 object to be displayed
- * @returns reference ostream with the matrix's display form appended
- */
-void SO6::unpermuted_print()
-{
+void SO6::unpermuted_print() {
+    int maxWidth = 0;
+
+    // Find the maximum width of the elements
+    for (int row = 0; row < 6; row++) {
+        for (int col = 0; col < 6; col++) {
+            std::stringstream ss;
+            ss << this->unpermuted(col, row);
+            maxWidth = std::max(maxWidth, static_cast<int>(ss.str().length()));
+        }
+    }
+
+    const int width = maxWidth + 2; // Adjust the width by adding 2
+
     std::cout << "\n";
-    for (int row = 0; row < 6; row++)
-    {
-        if (row == 0)
-            std::cout << "⌈\t";
-        else if (row == 5)
-            std::cout << "⌊\t";
-        else
-            std::cout << "|\t";
-        for (int col = 0; col < 6; col++)
-            std::cout << (*this).unpermuted(col,row) << '\t';
-        if (row == 0)
-            std::cout << "\t⌉\n";
-        else if (row == 5)
-        {
-            std::cout << "\t⌋\n";
+    for (int row = 0; row < 6; row++) {
+        std::string leftBorder = (row == 0) ? "⌈" : ((row == 5) ? "⌊" : "|");
+        std::string rightBorder = (row == 0) ? "⌉" : ((row == 5) ? "⌋" : "|");
+
+        std::cout << leftBorder << "\t";
+        for (int col = 0; col < 6; col++) {
+            std::cout << std::setw(width) << this->unpermuted(col, row);
         }
-        else
-        {
-            std::cout << "\t|\n";
-        }
+        std::cout << "\t" << rightBorder << "\n";
     }
     std::cout << "\n";
 }

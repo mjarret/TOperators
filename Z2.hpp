@@ -1,3 +1,6 @@
+#ifndef Z2_HPP
+#define Z2_HPP
+
 #include <array>
 
 typedef int8_t z2_int;
@@ -35,6 +38,7 @@ public:
     Z2& operator=(Z2&); //function that makes the operator have equal entries to parameter
     friend std::ostream& operator<<(std::ostream&,const Z2&); //display
     void negate(){val[0]=-val[0];val[1]=-val[1];}
+    bool is_negative() const;
     // static const Z2 inverse_root2() {return Z2(1,0,1);}
     // static const Z2 one() {return Z2(1,0,0);}
     // static const Z2 zero() {return Z2(0,0,0);}
@@ -44,3 +48,5 @@ public:
 private:
     
 };
+
+#endif // Z2_HPP
