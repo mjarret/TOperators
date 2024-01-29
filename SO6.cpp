@@ -109,11 +109,11 @@ SO6::SO6()
  */
 SO6::SO6(Z2 other[6][6])
 {
-    // for(int col =0; col<6; col++) {
-    //     for(int row=0; row <6; row++) {
-    //         arr[col][row]=other[col][row];
-    //     }
-    // }
+    for(int col =0; col<6; col++) {
+        for(int row=0; row <6; row++) {
+            arr[col][row]=other[col][row];
+        }
+    }
 }
 
 // Something much faster than this would be a "multiply by T" method that explicitly does the matrix multiplication given a particular T matrix instead of trying to compute it naively
@@ -128,7 +128,7 @@ SO6 SO6::operator*(const SO6 &other) const
     // multiplies operators assuming COLUMN,ROW indexing
     SO6 prod;
 
-    // let's see what happens if i turn of history printing
+    // let's see what happens if i turn off history printing
     prod.hist.reserve(hist.size() + other.hist.size());  // Reserve instead of resize
     std::copy(other.hist.begin(), other.hist.end(), std::back_inserter(prod.hist));
     std::copy(hist.begin(), hist.end(), std::back_inserter(prod.hist));
@@ -281,6 +281,7 @@ std::string SO6::name_as_num(const std::string name) {
         ret.append(std::to_string((uint) ((i & 15) -1)) + " ");
         if(i>15) ret.append(std::to_string((uint)((i>>4)-1)) + " ");
     }
+    ret.pop_back();
     return ret;
 }
 
@@ -296,6 +297,7 @@ std::string SO6::circuit_string() {
             ret.append(std::to_string(upper) + " ");
         }
     }
+    ret.pop_back();
     return ret;
 }
 
@@ -441,14 +443,14 @@ std::ostream &operator<<(std::ostream &os, const SO6 &m) {
         }
     }
 
-    const int width = maxWidth + 2; // Adjust the width by adding 2
+    const int width = maxWidth + 3; // Adjust the width by adding 2
 
     os << "\n";
     for (int row = 0; row < 6; row++) {
         std::string leftBorder = (row == 0) ? "⌈" : ((row == 5) ? "⌊" : "|");
         std::string rightBorder = (row == 0) ? "⌉" : ((row == 5) ? "⌋" : "|");
 
-        os << leftBorder << "\t";
+        os << leftBorder << "  ";
         for (int col = 0; col < 6; col++) {
             os << std::setw(width) << m[col][row];
         }

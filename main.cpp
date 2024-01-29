@@ -15,6 +15,8 @@
 #include <cstring>
 #include <string>
 #include <fstream>
+#include <sstream>
+#include <bitset>
 #include <vector>
 #include <omp.h>
 #include <thread>
@@ -26,7 +28,7 @@ using namespace std;
 // Global variables
 
 // Threading and performance tracking
-static uint8_t THREADS = (uint)std::thread::hardware_concurrency()-1; // Default number of threads
+static uint8_t THREADS = (uint8_t) std::thread::hardware_concurrency()-1; // Default number of threads
 static omp_lock_t lock;
 static std::chrono::_V2::high_resolution_clock::time_point tcount_init_time;
 static chrono::duration<double> timeelapsed;
@@ -46,52 +48,58 @@ static bool verbose;
 static bool transpose_multiply = false;
 static bool explicit_search_mode = false;
 
-
+/**
+ * @brief Inserts all permutations of a given pattern into a set.
+ * 
+ * This function generates all permutations of the input pattern and inserts them into a set. 
+ * It also considers modifications of each permutation by toggling the rows, and includes the transposed version of the pattern.
+ * 
+ * @param p The pattern to permute and modify.
+ */
 static void insert_all_permutations(pattern &p)
 {
+    // Insert the original pattern into the set
     pattern_set.insert(p);
+
+    // Initialize an array to represent the rows of the pattern
     int row[6] = {0, 1, 2, 3, 4, 5};
+
+    // Generate all permutations of the pattern
     while (std::next_permutation(row, row + 6))
     {
-
-        // First, insert the permutation from the original matrix
+        // Create a new pattern based on the current permutation
         pattern perm_of_orig;
         for (int c = 0; c < 6; c++)
         {
             for (int r = 0; r < 6; r++)
                 perm_of_orig.arr[c][r] = p.arr[c][row[r]];
         }
+
+        // Order the new pattern lexicographically and insert it into the set
         perm_of_orig.lexicographic_order();
         pattern_set.insert(perm_of_orig);
 
+        // Iterate over all possible combinations of row modifications
         for(unsigned int counter = 0; counter < (1 << 6); counter++) {
-            // This loop iterates over all 64 possible combinations of row modifications.
-            // 'counter' represents a combination, where each bit corresponds to a row.
-            // If a bit is set (1), the corresponding row is modified.
-            // For example:
-            //  - counter = 0 (binary 000000) means no rows are modified.
-            //  - counter = 1 (binary 000001) means only the first row is modified.
-            //  - counter = 3 (binary 000011) means the first and second rows are modified.
-            //  - and so on, up to counter = 63 (binary 111111), where all rows are modified.
+            pattern mod_of_perm = perm_of_orig; // Start with a copy of the original permutation
 
-            pattern mod_of_perm = perm_of_orig; // Start with a copy of the original permutation.
             for(int j = 0; j < 6; j++) {
                 if((counter >> j) & 1) {
-                    // Check if the j-th bit of 'counter' is set.
-                    // '1 << j' creates a bitmask with only the j-th bit set.
-                    // If the j-th bit is set in 'counter', modify the j-th row.
+                    // Modify the j-th row if the j-th bit of 'counter' is set
                     mod_of_perm.mod_row(j);
                 }
             }
 
-            mod_of_perm.lexicographic_order(); // Order the pattern lexicographically.
-            pattern_set.insert(mod_of_perm);   // Insert the modified pattern into the set.
+            // Order the modified pattern lexicographically and insert it into the set
+            mod_of_perm.lexicographic_order();
+            pattern_set.insert(mod_of_perm);
         }
     }
 
-    // Insert the transposes, just one transpose now
+    // Insert the transposed version of the original pattern and all of its permutations
     pattern p_transpose = p.transpose();
-    pattern_set.insert(p_transpose);
+    if(pattern_set.find(p_transpose) == pattern_set.end())
+        insert_all_permutations(p_transpose);
 }
 
 static void erase_all_permutations(pattern &pat)
@@ -123,6 +131,36 @@ static void erase_all_permutations(pattern &pat)
     }
 }
 
+static std::string convert_csv_line_to_binary(const std::string& line) {
+    std::stringstream ss(line);
+    std::string item;
+    std::string binaryString;
+
+    while (std::getline(ss, item, ',')) {
+        int number = std::stoi(item);
+        binaryString += std::bitset<2>(number).to_string();
+    }
+    if(binaryString.length() !=72) {
+        std::cout << "shit.";
+        std::exit(0);
+    }
+    return binaryString;
+}
+
+static SO6 SO6_to_find() {
+    const int cols = 6;
+    const int rows = 6;
+    Z2 z2_matrix[cols][rows] = {
+        {Z2(1, -1, 3), Z2(-1, -1, 3), Z2(-1, 0, 3), Z2(1, 0, 3), Z2(0, 0, 0), Z2(0, 0, 0)},
+        {Z2(0, 0, 0), Z2(-1, 1, 3), Z2(-1, 0, 3), Z2(0, 0, 0), Z2(-1, 0, 3), Z2(-1, -1, 3)},
+        {Z2(1, 0, 3), Z2(-1, 0, 3), Z2(1, -1, 3), Z2(-1, -1, 3), Z2(0, 0, 0), Z2(0, 0, 0)},
+        {Z2(1, 0, 3), Z2(0, 0, 0), Z2(0, 0, 0), Z2(-1, 1, 3), Z2(-1, -1, 3), Z2(1, 0, 3)},
+        {Z2(0, 0, 0), Z2(-1, 0, 3), Z2(1, 1, 3), Z2(0, 0, 0), Z2(1, -1, 3), Z2(-1, 0, 3)},
+        {Z2(1, 1, 3), Z2(0, 0, 0), Z2(0, 0, 0), Z2(1, 0, 3), Z2(1, 0, 3), Z2(1, -1, 3)}
+    };
+    return SO6(z2_matrix);
+}
+
 /// @brief Reads binary patterns from a file and processes them.
 ///        Each line in the file is expected to be a binary string representing a pattern.
 ///        This function converts each line into a pattern object, orders it lexicographically,
@@ -137,10 +175,15 @@ static void read_pattern_file(std::string pattern_file_path)
         return;
     }
 
-    std::string binaryString; // Renamed for clarity
-    while (getline(patternFile, binaryString))
+    bool isCSV = pattern_file_path.substr(pattern_file_path.find_last_of(".") + 1) == "csv";
+
+    
+
+     // Renamed for clarity
+    std::string line;
+    while (std::getline(patternFile, line))
     {
-        int index = 0; // Index for binaryArray
+        std::string binaryString = isCSV ? convert_csv_line_to_binary(line) : line;
         pattern currentPattern(binaryString); // More descriptive name
         currentPattern.lexicographic_order();
         insert_all_permutations(currentPattern);
@@ -372,9 +415,9 @@ static void report_begin_T_count(const int T) {
  * @param c current integer countr
  * @param s total size
  */
-static void report_percent_complete(const uint64_t &c, const uint64_t s)
+inline static void report_percent_complete(const uint64_t &c, const uint64_t s)
 {
-    if ((c & 0x1FFF) == 0) // if c is divisible by 8192
+    if ((c & 0x7F) == 0) // if c is divisible by 128
     {
         std::cout << "\033[A\033[A\r ||\t↪ [Progress] Processing .....    "
                   << (100*c/s) << "\%" << "\n ||\t↪ [Patterns] "
@@ -435,15 +478,23 @@ static std::ofstream prepare_T_count_io(const int t, uint8_t &stored_depth_max, 
  * @param current The current set of SO6 objects.
  * @param generating_set Reference to an array of vectors of SO6 objects to store the generated sets.
  */
-void storeCosets(int curr_T_count, int free_multiply_depth, int num_generating_sets, 
-                 std::set<SO6>& current, std::vector<SO6> (&generating_set)[])
+void storeCosets(int curr_T_count, 
+                 std::set<SO6>& current, std::vector<SO6> &generating_set)
 {
-    int ff = utils::free_multiply_depth(target_T_count,stored_depth_max);
-    if (curr_T_count < ff - 1)
+    int ngs = utils::num_generating_sets(target_T_count,stored_depth_max);
+    if (curr_T_count < ngs)
     {
-        int index = min(curr_T_count, num_generating_sets - 1);
-        std::cout << "\033[A\r ||\t↪ [Save] Saving coset T₀{T=" << curr_T_count + 1 << "} as generating_set[" << index << "]\n ||" << endl;
-        generating_set[index] = std::vector<SO6>(current.begin(),current.end());
+        std::cout << "\033[A\r ||\t↪ [Save] Saving coset T₀{T=" << curr_T_count + 1 << "} as generating_set[" << curr_T_count << "]\n ||" << std::endl;
+        generating_set = std::vector<SO6>(current.begin(),current.end());
+        generating_set.erase(std::remove_if(generating_set.begin(), generating_set.end(),
+                                [](SO6& S) {
+                                    return (S.circuit_string().back() == '0');
+                                }),
+                    generating_set.end());
+
+        for(SO6 &S : generating_set) {
+                S = S.left_multiply_by_T(0);
+        }
     }
 }
 
@@ -455,6 +506,7 @@ void storeCosets(int curr_T_count, int free_multiply_depth, int num_generating_s
  */
 int main(int argc, char **argv)
 {
+    search_token = SO6_to_find();
     auto program_init_time = now(); // Begin timekeeping
     setParameters(argc, argv);      // Initialize parameters to command line argument
     configure();                    // Configure the search
@@ -464,11 +516,8 @@ int main(int argc, char **argv)
 
     // This stores the generating sets. Note that the initial generating set is just the 15 T matrices and, thus, doesn't need to be stored
     int ngs = utils::num_generating_sets(target_T_count, stored_depth_max);
-    int ff = utils::free_multiply_depth(target_T_count, stored_depth_max);
 
-    std::vector<SO6> generating_set[ngs];
-
-    
+    std::vector<SO6> generating_set[ngs];    
     std::string file_string;
 
     for (int curr_T_count = 0; curr_T_count < stored_depth_max; ++curr_T_count)
@@ -495,7 +544,7 @@ int main(int argc, char **argv)
         utils::rotate_and_clear(prior, current, next); // current is now ready for next iteration
 
         finish_io(current.size(), true, of);
-        storeCosets(curr_T_count, ff, ngs, current, generating_set);
+        storeCosets(curr_T_count, current, generating_set[curr_T_count]);
     }
     
     std::set<SO6>().swap(prior); // Swap to clear
@@ -503,13 +552,11 @@ int main(int argc, char **argv)
 
     std::vector<SO6> to_compute = utils::convert_to_vector_and_clear(current);
 
-    int pss = pattern_set.size();
-    std::cout << "[Report] Current patterns: " << pss << std::endl;
+    std::cout << "[Report] Current patterns: " << pattern_set.size() << std::endl;
 
     std::cout << "[Begin] Beginning brute force multiply.\n ||" << std::endl;
     uint64_t set_size = to_compute.size();
     uint64_t interval_size = std::ceil(set_size / THREADS); // Equally divide among threads, not sure how to balance but each should take about the same time
-
 
     for (int curr_T_count = stored_depth_max; curr_T_count < target_T_count; ++curr_T_count)
     {    
@@ -528,11 +575,12 @@ int main(int argc, char **argv)
                 erase_and_record_pattern(N, of);
                 continue;
             }
-
+ 
             for (const SO6 &G : generating_set[curr_T_count-stored_depth_max - 1])
             {
                 SO6 N = G*S;
                 erase_and_record_pattern(N, of);
+                
             }
         }
         omp_destroy_lock(&lock);

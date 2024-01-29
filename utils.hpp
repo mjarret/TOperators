@@ -71,7 +71,7 @@ public:
      * @return Number of generating sets.
      */
     static int num_generating_sets(int total_T_count, int max_stored_depth) {
-        return std::min(total_T_count - 1 - max_stored_depth, max_stored_depth - 1); 
+        return std::min(total_T_count - 1 - max_stored_depth, max_stored_depth); 
     }
 };
 #endif // UTILS_HPP
