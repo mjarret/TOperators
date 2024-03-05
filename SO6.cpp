@@ -5,7 +5,7 @@
 #include <vector>
 #include <algorithm>
 #include "SO6.hpp"
-// #include "pattern.hpp"
+#include "pattern.hpp"
 
 /**
  * Method to compare two Z2 arrays of length 6 lexicographically
@@ -150,6 +150,39 @@ SO6 SO6::operator*(const SO6 &other) const
     return prod;
 }
 
+/**
+ * Overloads the * operator with matrix multiplication for SO6 objects
+ * @param other reference to pattern to be multiplied with (*this)
+ * @return matrix multiplication of (*this) and other
+ */
+SO6 SO6::operator*(const pattern &other) const
+{
+    // multiplies operators assuming COLUMN,ROW indexing
+    SO6 prod;
+    prod.hist = hist; // patterns don't typically have histories in this code base, could be changed but currently not so 
+
+    for (int row = 0; row < 6; row++)
+    {
+        for (int k = 0; k < 6; k++)
+        {
+            const Z2& left_element = (this->unpermuted(k,row));            
+            if (left_element[0] == 0) continue;    
+            
+            Z2 smallerLDE = left_element;
+            smallerLDE[2]--; //decrease lde
+
+            for (int col = 0; col < 6; col++)
+            { 
+                if(other.arr[col][k].first) prod[col][row] += left_element;
+                if(other.arr[col][k].second) prod[col][row] += smallerLDE; 
+            }
+        }
+    }
+    // prod.lexicographic_order(); // This is no longer useful to us, I think
+    return prod;
+}
+
+
 /// @brief Left multiply this by a T operator
 /// @param i the index of T_i
 /// @return the result T_i * this
@@ -243,25 +276,47 @@ SO6 SO6::left_multiply_by_T(const int &i, const int &j, const unsigned char &p) 
 /// @brief This implements insertion sort
 void SO6::lexicographic_order()
 {
+
+    int inverse_permutation[6] = {0,1,2,3,4,5};
+    for(int i = 0; i < 6; i++) {
+        inverse_permutation[permutation[i]] = i;
+    }
+
     for (int i = 1; i < 6; i++)
     {
         int j = i;
         while (j > 0 && SO6::lexicographical_less(arr[j], arr[j - 1]))
         {
             // Swap the actual Z2 arrays in-place
-            for (int k = 0; k < 6; k++)
+            for (int k = 0; k < 6; k++) {
                 std::swap(arr[j][k], arr[j - 1][k]);
-
+            }
             // Swap the corresponding indices in the permutation array
-            std::swap(permutation[j], permutation[j - 1]);
+            std::swap(inverse_permutation[j], inverse_permutation[j - 1]); 
             j--;
         }
+    }
+
+    for(int i = 0; i < 6; i++) {
+        permutation[inverse_permutation[i]] = i;
     }
 }
 
 std::string SO6::name()
 {
     return std::string(hist.begin(),hist.end());
+}
+
+SO6 SO6::reconstruct() {
+    SO6 ret = SO6::identity();
+    for(unsigned char i : hist)
+    {
+        ret = ret.left_multiply_by_T((i & 15) -1);
+        if(i>15) ret = ret.left_multiply_by_T((i>>4)-1);
+    }
+    ret.hist = hist;
+    ret.lexicographic_order();
+    return ret;
 }
 
 SO6 SO6::reconstruct(const std::string name) {
@@ -322,6 +377,20 @@ std::vector<unsigned char> invert_circuit_string(const std::string& input) {
     return hist;
 }
 
+SO6 SO6::reconstruct_from_circuit_string(const std::string& input) {
+    std::istringstream iss(input);
+    int number;
+    SO6 ret = SO6::identity();
+
+    // Iterate over each integer in the string
+    while (iss >> number) {
+        // Process each number, for example, print it
+        ret = ret.left_multiply_by_T(number);
+    }    
+    
+    return ret;
+}
+
 
 bool SO6::operator<(const SO6 &other) const
 {
@@ -337,7 +406,7 @@ bool SO6::operator<(const SO6 &other) const
     return false;
 }
 
-z2_int SO6::getLDE()
+const z2_int SO6::getLDE() const
 {
     z2_int ret;
     for (int i = 0; i < 6; i++)
@@ -350,24 +419,43 @@ z2_int SO6::getLDE()
     return ret;
 }
 
-SO6 SO6::transpose() {
-    SO6 ret;
-    for(int col = 0; col<6; col++) {
-        for(int row =0; row < 6; row++) {
-            ret[col][row] = (*this)[row][col];
-        }
-    }
-    ret.lexicographic_order();
-    return ret;
-}
+// SO6 SO6::transpose() 
+// {
+//     SO6 ret;
+//     for(int col = 0; col<6; col++) {
+//         for(int row =0; row < 6; row++) {
+//             ret[col][row] std::vector<unsigned char> invert_circuit_string(const std::string& input) {
+//     std::vector<unsigned char> hist;
+//     std::istringstream iss(input);
+//     int lower, upper;
 
-pattern SO6::to_pattern()
+//     while (iss >> lower) {
+//         lower += 1;  // Reverse the subtraction of 1 for the lower 4 bits
+//         unsigned char byte = static_cast<unsigned char>(lower & 15);
+
+//         // Check if there's an upper part
+//         if (iss >> upper) {
+//             upper += 1;  // Reverse the subtraction of 1 for the upper 4 bits
+//             byte |= static_cast<unsigned char>((upper & 15) << 4);
+//         }
+
+//         hist.push_back(byte);
+//     }
+
+//     return hist;
+//     }
+//     }
+//     ret.lexicographic_order();
+//     return ret;
+// }
+
+pattern SO6::to_pattern() const
 {
     pattern ret;
     ret.hist.reserve(hist.size());
     ret.hist = hist;
 
-    int8_t lde = getLDE();
+    const int8_t& lde = getLDE();
     for (int col = 0; col < 6; col++)
     {
         for (int row = 0; row < 6; row++)
@@ -411,18 +499,6 @@ bool SO6::operator==(const SO6 &other) const
 
 bool SO6::operator!=(const SO6 &other) const {
     return !(*this==other);
-}
-
-SO6 SO6::reconstruct() {
-    SO6 ret = SO6::identity();
-    for(unsigned char i : hist)
-    {
-        ret = ret.left_multiply_by_T((i & 15) -1);
-        if(i>15) ret = ret.left_multiply_by_T((i>>4)-1);
-    }
-    ret.hist = hist;
-    ret.lexicographic_order();
-    return ret;
 }
 
 /**

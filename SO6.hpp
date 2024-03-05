@@ -1,8 +1,11 @@
+#ifndef SO6_HPP
+#define SO6_HPP
 
 #include <vector>
 #include "Z2.hpp"
 #include "pattern.hpp"
-#include "History.hpp"
+
+class pattern;
 
 class SO6{
     public:
@@ -11,6 +14,8 @@ class SO6{
         SO6(Z2[6][6]); //initializes matrix according to a 6x6 array of Z2
         
         SO6 operator*(const SO6&) const; //mutliplication
+        SO6 operator*(const pattern &) const;
+
         bool operator<(const SO6 &) const;
         bool operator==(SO6&); //checking equality up to signed permutation
         bool operator==(const SO6 &) const;
@@ -19,18 +24,19 @@ class SO6{
         const Z2* operator[](const int &i) const {return arr[i];}  // Return the array element needed. 
         friend std::ostream& operator<<(std::ostream&,const SO6&); //display
 
-        Z2 unpermuted(const int &i, const int &j) const {return arr[permutation[i]][j];}  // Return the array element needed. 
+        Z2 unpermuted(const int &col, const int &row) const {return arr[permutation[col]][row];}  // Return the array element needed. 
         SO6 left_multiply_by_T(const int &) const;
         SO6 left_multiply_by_circuit(std::vector<unsigned char> &);
         SO6 left_multiply_by_T(const int &,const int &,const unsigned char &) const;
         SO6 left_multiply_by_T_transpose(const int &);        
 
-        z2_int getLDE();
-        pattern to_pattern();
+        const z2_int getLDE() const;
+        pattern to_pattern() const;
         SO6 reconstruct();
         SO6 transpose();
         std::string name(); 
         std::string circuit_string(); 
+        static SO6 reconstruct_from_circuit_string(const std::string& );        
         
         void update_history(const unsigned char &); 
         
@@ -49,8 +55,10 @@ class SO6{
             }
             return I;
         }
+        uint8_t permutation[6]  = {0,1,2,3,4,5};
 
     private:
-        uint8_t permutation[6] = {0,1,2,3,4,5};
         Z2 arr[6][6];
 };
+
+#endif

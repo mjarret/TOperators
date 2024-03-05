@@ -5,6 +5,9 @@
 #include <vector>
 #include <utility> // For std::pair
 #include <functional> // For std::hash
+#include "SO6.hpp"
+
+class SO6;
 
 class pattern{
     public:
@@ -13,12 +16,15 @@ class pattern{
         pattern(const std::string &);
 
         void lexicographic_order();
+        void case_order();
         pattern pattern_mod();
         void mod_row(const int &);
         pattern transpose();
         const bool* to_binary() const;
 
         bool operator==(const pattern &) const;
+
+        SO6 operator*(const SO6 &) const;
         bool operator<(const pattern &) const;
         friend std::ostream& operator<<(std::ostream&, const pattern &);
 
@@ -28,7 +34,16 @@ class pattern{
         std::string human_readable();
 
         static int8_t lexicographical_compare(const std::pair<bool,bool>[6],const std::pair<bool,bool>[6]);
+        static int8_t case_compare(const std::pair<bool,bool>[6],const std::pair<bool,bool>[6]);
+
         static bool lexicographical_less(const std::pair<bool,bool>[6],const std::pair<bool,bool>[6]);
+        static bool case_less(const std::pair<bool,bool>[6],const std::pair<bool,bool>[6]);
+        bool case_equals(const pattern &) const;
+
+        const int case_number();
+
+        std::string case_string();
+
         static const pattern identity() {
             pattern I;
             for(int k =0; k<6; k++) {

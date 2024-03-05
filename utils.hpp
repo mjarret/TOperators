@@ -5,6 +5,8 @@
 #include <set>
 #include <algorithm>
 #include <random>
+#include <sstream>
+#include <bitset>
 #include "Z2.hpp"
 #include "SO6.hpp"
 
@@ -38,6 +40,24 @@ public:
         std::shuffle(v.begin(), v.end(), g);
         return v;  // Return vector
     }
+
+    static std::string convert_csv_line_to_binary(const std::string& line) {
+        std::stringstream ss(line);
+        std::string item;
+        std::string binaryString;
+
+        while (std::getline(ss, item, ',')) {
+            int number = std::stoi(item);
+            binaryString += std::bitset<2>(number).to_string();
+        }
+        if(binaryString.length() !=72) {
+            std::cout << "shit.";
+            std::exit(0);
+        }
+        return binaryString;
+    }
+
+    
 
 
     /**

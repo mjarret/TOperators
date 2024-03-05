@@ -21,10 +21,12 @@ pattern::pattern(const bool binary_rep[72]) {
 pattern::pattern(const std::string &binary_string) {
     bool binary_rep[72] = {0}; // Array representing binary pattern
     int index = 0; // Index for binaryArray
-
+    float iter = 72/binary_string.length();
+    if(iter != 2 && iter != 1) std::exit(EXIT_FAILURE);
     for (char digit : binary_string)
     {
-        binary_rep[index++] = (digit == '1'); // Convert char to boolean
+        binary_rep[index] = (digit == '1'); // Convert char to boolean
+        index+=iter;
     }
     *this = pattern(binary_rep);
 }
@@ -49,6 +51,36 @@ bool pattern::operator==(const pattern &other) const {
         }
     }
     return true;
+}
+
+/**
+ * Overloads the * operator with matrix multiplication for SO6 objects
+ * @param other reference to pattern to be multiplied with (*this)
+ * @return matrix multiplication of (*this) and other
+ */
+SO6 pattern::operator*(const SO6 &other) const
+{
+    SO6 prod;
+    prod.hist = other.hist; 
+
+    for (int col = 0; col < 6; col++)
+    {
+        for (int k = 0; k < 6; k++)
+        {
+            const Z2& left_element = other.unpermuted(col,k);            
+            if (left_element[0] == 0) continue;    
+            
+            Z2 smallerLDE = left_element;
+            smallerLDE[2]--; //decrease lde
+
+            for (int row = 0; row < 6; row++)
+            { 
+                if(arr[k][row].first) prod[col][row] += left_element;
+                if(arr[k][row].second) prod[col][row] += smallerLDE; 
+            }
+        }
+    }
+    return prod;
 }
 
 bool pattern::operator<(const pattern &other) const {
@@ -77,15 +109,41 @@ int8_t pattern::lexicographical_compare(const std::pair<bool,bool> first[6],cons
     return 0;
 }
 
+int8_t pattern::case_compare(const std::pair<bool,bool> first[6],const std::pair<bool,bool> second[6])
+{
+    for (int row = 0; row < 6; row++)
+    {
+        if (first[row].first == second[row].first) {
+            continue;
+        }
+        if (first[row].first > second[row].first)           // Reverse ordering is better for tests
+            return -1;
+        return 1;
+    }
+    return 0;
+}
+
 bool pattern::lexicographical_less(const std::pair<bool,bool> first[6],const std::pair<bool,bool> second[6])
 {
     return (pattern::lexicographical_compare(first,second)<0);
+}
+
+bool pattern::case_less(const std::pair<bool,bool> first[6],const std::pair<bool,bool> second[6])
+{
+    return (pattern::case_compare(first,second)<0);
 }
 
 void pattern::lexicographic_order() {
     for (int i = 1; i < 6; i++)
     {
         for (int j = i; j > 0 && pattern::lexicographical_less(arr[j],arr[j-1]); j--)  std::swap(arr[j], arr[j - 1]);
+    }
+}
+
+void pattern::case_order() {
+    for (int i = 1; i < 6; i++)
+    {
+        for (int j = i; j > 0 && pattern::case_less(arr[j],arr[j-1]); j--)  std::swap(arr[j], arr[j - 1]);
     }
 }
 
@@ -160,6 +218,40 @@ std::ostream &operator<<(std::ostream &os, const pattern &m)
     return os;
 }
 
+/**
+ * Overloads << function for SO6.
+ * @param os reference to ostream object needed to implement <<
+ * @param m reference to SO6 object to be displayed
+ * @returns reference ostream with the matrix's display form appended
+ */
+std::string pattern::case_string()
+{
+    std::string os = "\n";
+    for (int row = 0; row < 6; row++)
+    {
+        if (row == 0)
+            os += "⌈ ";
+        else if (row == 5)
+            os += "⌊ ";
+        else
+            os += "| ";
+        for (int col = 0; col < 6; col++)
+            os += arr[col][row].first ? "\xCE\x94 " : "  " ;
+        if (row == 0)
+            os += "⌉\n";
+        else if (row == 5)
+        {
+            os += "⌋\n";
+        }
+        else
+        {
+            os += "|\n";
+        }
+    }
+    os += "\n";
+    return os;
+}
+
 std::string pattern::name()
 {
     std::string ret = "";
@@ -168,6 +260,50 @@ std::string pattern::name()
         ret.append(1,i);
     }
     return ret;
+}
+
+// If needed, we can make this routine a bit faster by eliminating lexicographic ordering
+// since we can just count 1s to distinguish most of these
+const int pattern::case_number() {
+    this->case_order();
+    // Case 1,2,5,7 all have at most 2 entries per row
+    // Thus, after lexicographic ordering of the columns
+    // these two entries will always be in columns 0 or 1
+    if(!arr[2][0].first) {
+        // This is now case 1,2,5,7
+        // Case 1,2 both have 4 empty columns.
+        // Thus, after lex ordering, columns 2-5 of case 5,7 will be empty
+        if(arr[2][2].first) {
+            // This is now case 5,7
+            // Case 5 has 2 empty columns. 
+            // Thus, after lex ordering, column 4,5 will be empty
+            return arr[4][4].first ? 7 : 5;
+        }
+        // This is now case 1,2
+        // Case 1 has 4 empty rows and case 2 has 2 empty rows
+        // Thus, we can't return this as easily without some more work
+        int row_sum = 0;
+        for(int row = 0; row < 5; row ++) row_sum+= arr[0][row].first;
+        return row_sum > 2 ? 2 : 1;
+    }
+    // This is now case 3,4,6,8
+    // Case 3,4 has two empty columns
+    if(arr[4][2].first) {
+        // This is now case 6,8. Case 6 has two empty rows
+        for(int row=0; row <5; row++) {
+            if(!arr[0][row].first) {
+                for(int col=0; col <5; col ++) {
+                    if(arr[col][row].first) break;
+                }
+                return 6;
+            }
+            return 8;
+        }
+    }
+    // This is now case 3,4. Case three has two rows with only two 1s. Column 2 will always distinguish these.
+    int row_sum=0;
+    for(int row = 0; row<5; row++) row_sum+=arr[2][row].first;
+    return row_sum>2 ? 3 : 4;
 }
 
 // std::string pattern::human_readable() 
@@ -196,4 +332,13 @@ std::string pattern::human_readable()
         ret+= "]";
     }
     return ret;
+}
+
+bool pattern::case_equals(const pattern & other) const {
+    for(int col = 0; col<6; col++) {
+        for(int row = 0; row <6; row++) {
+            if(other.arr[col][row].first != arr[col][row].first) return false;
+        }
+    }
+    return true;
 }

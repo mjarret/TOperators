@@ -9,44 +9,69 @@
  * @version 6/1/21
  */
 
-#include <iostream>
 #include <chrono>
 #include <set>
-#include <cstring>
-#include <string>
 #include <fstream>
-#include <sstream>
-#include <bitset>
 #include <vector>
 #include <omp.h>
 #include <thread>
-#include <filesystem>
+#include <dirent.h> // Directory Entry
+#include "Globals.hpp"
 #include "utils.hpp"
 
 using namespace std;
 
-// Global variables
+/**
+ * @brief Inserts all permutations of a given pattern into a set.
+ * 
+ * This function generates all permutations of the input pattern and inserts them into a set. 
+ * It also considers modifications of each permutation by toggling the rows, and includes the transposed version of the pattern.
+ * 
+ * @param p The pattern to permute and modify.
+ */
+static std::set<pattern> permutation_set(pattern &pat)
+{   
+    std::set<pattern> perms;
+    // Insert the original pattern into the set
+    std::set<pattern> inits;
+    inits.insert(pat);
+    inits.insert(pat.transpose());
 
-// Threading and performance tracking
-static uint8_t THREADS = (uint8_t) std::thread::hardware_concurrency()-1; // Default number of threads
-static omp_lock_t lock;
-static std::chrono::_V2::high_resolution_clock::time_point tcount_init_time;
-static chrono::duration<double> timeelapsed;
+    for(pattern p : inits) {
+        perms.insert(p); 
+        // Initialize an array to represent the rows of the pattern
+        int row[6] = {0, 1, 2, 3, 4, 5};
 
-// Pattern handling and search settings
-static set<pattern> pattern_set;          // Holds the set of patterns
-static set<SO6> explicit_search_set;      // Sets the matrices we're looking for
-static SO6 search_token;                  // In case we're searching for something in particular
-static std::string pattern_file = "";     // Pattern file
-static uint8_t explicit_search_depth = 0; // Explicit search depth
-
-// Configuration and state variables
-static uint8_t target_T_count;            // Default target_T_count = 0
-static uint8_t stored_depth_max = 255;    // Limit comparison depth, default 255
-static bool saveResults = false;          // Flag to save data
-static bool verbose;
-static bool transpose_multiply = false;
-static bool explicit_search_mode = false;
+        // Generate all permutations of the pattern
+        while (std::next_permutation(row, row + 6))
+        {
+            // Create a new pattern based on the current permutation
+            pattern perm_of_orig;
+            for (int c = 0; c < 6; c++)
+            {
+                for (int r = 0; r < 6; r++)
+                    perm_of_orig.arr[c][r] = p.arr[c][row[r]];
+            }
+            // Order the new pattern lexicographically and insert it into the set
+            perm_of_orig.lexicographic_order();
+            perms.insert(perm_of_orig);
+            // Iterate over all possible combinations of row modifications
+            for(unsigned int counter = 0; counter < (1 << 6); counter++) {
+                pattern mod_of_perm = perm_of_orig; // Start with a copy of the original permutation
+                for(int j = 0; j < 6; j++) {
+                    if((counter >> j) & 1) {
+                        // Modify the j-th row if the j-th bit of 'counter' is set
+                        mod_of_perm.mod_row(j);
+                    }
+                }
+                // Order the modified pattern lexicographically and insert it into the set
+                mod_of_perm.lexicographic_order();
+                perms.insert(mod_of_perm);
+            }
+        }
+    }
+    return perms;
+}
 
 /**
  * @brief Inserts all permutations of a given pattern into a set.
@@ -57,108 +82,15 @@ static bool explicit_search_mode = false;
  * @param p The pattern to permute and modify.
  */
 static void insert_all_permutations(pattern &p)
+{   
+    std::set<pattern> perms_of_p = permutation_set(p); 
+    pattern_set.insert(perms_of_p.begin(),perms_of_p.end());
+}
+
+static void erase_all_permutations(pattern &p)
 {
-    // Insert the original pattern into the set
-    pattern_set.insert(p);
-
-    // Initialize an array to represent the rows of the pattern
-    int row[6] = {0, 1, 2, 3, 4, 5};
-
-    // Generate all permutations of the pattern
-    while (std::next_permutation(row, row + 6))
-    {
-        // Create a new pattern based on the current permutation
-        pattern perm_of_orig;
-        for (int c = 0; c < 6; c++)
-        {
-            for (int r = 0; r < 6; r++)
-                perm_of_orig.arr[c][r] = p.arr[c][row[r]];
-        }
-
-        // Order the new pattern lexicographically and insert it into the set
-        perm_of_orig.lexicographic_order();
-        pattern_set.insert(perm_of_orig);
-
-        // Iterate over all possible combinations of row modifications
-        for(unsigned int counter = 0; counter < (1 << 6); counter++) {
-            pattern mod_of_perm = perm_of_orig; // Start with a copy of the original permutation
-
-            for(int j = 0; j < 6; j++) {
-                if((counter >> j) & 1) {
-                    // Modify the j-th row if the j-th bit of 'counter' is set
-                    mod_of_perm.mod_row(j);
-                }
-            }
-
-            // Order the modified pattern lexicographically and insert it into the set
-            mod_of_perm.lexicographic_order();
-            pattern_set.insert(mod_of_perm);
-        }
-    }
-
-    // Insert the transposed version of the original pattern and all of its permutations
-    pattern p_transpose = p.transpose();
-    if(pattern_set.find(p_transpose) == pattern_set.end())
-        insert_all_permutations(p_transpose);
-}
-
-static void erase_all_permutations(pattern &pat)
-{
-    pattern_set.erase(pat);
-    int row[6] = {0, 1, 2, 3, 4, 5};
-    while (std::next_permutation(row, row + 6))
-    {
-        pattern perm_of_orig;
-        for (int c = 0; c < 6; c++)
-        {
-            for (int r = 0; r < 6; r++)
-                perm_of_orig.arr[c][r] = pat.arr[c][row[r]];
-        }
-        perm_of_orig.lexicographic_order();
-        pattern_set.erase(perm_of_orig);
-
-        // Now erase all things that are off by identity
-        for(unsigned int counter = 0; counter < 64; counter++) {
-            pattern mod_of_perm = perm_of_orig;
-            for(int j = 0; j < 6; j++) {
-                if(counter & (1 << j)) {
-                    mod_of_perm.mod_row(j);
-                }
-            }
-            mod_of_perm.lexicographic_order();
-            pattern_set.erase(mod_of_perm);
-        }
-    }
-}
-
-static std::string convert_csv_line_to_binary(const std::string& line) {
-    std::stringstream ss(line);
-    std::string item;
-    std::string binaryString;
-
-    while (std::getline(ss, item, ',')) {
-        int number = std::stoi(item);
-        binaryString += std::bitset<2>(number).to_string();
-    }
-    if(binaryString.length() !=72) {
-        std::cout << "shit.";
-        std::exit(0);
-    }
-    return binaryString;
-}
-
-static SO6 SO6_to_find() {
-    const int cols = 6;
-    const int rows = 6;
-    Z2 z2_matrix[cols][rows] = {
-        {Z2(1, -1, 3), Z2(-1, -1, 3), Z2(-1, 0, 3), Z2(1, 0, 3), Z2(0, 0, 0), Z2(0, 0, 0)},
-        {Z2(0, 0, 0), Z2(-1, 1, 3), Z2(-1, 0, 3), Z2(0, 0, 0), Z2(-1, 0, 3), Z2(-1, -1, 3)},
-        {Z2(1, 0, 3), Z2(-1, 0, 3), Z2(1, -1, 3), Z2(-1, -1, 3), Z2(0, 0, 0), Z2(0, 0, 0)},
-        {Z2(1, 0, 3), Z2(0, 0, 0), Z2(0, 0, 0), Z2(-1, 1, 3), Z2(-1, -1, 3), Z2(1, 0, 3)},
-        {Z2(0, 0, 0), Z2(-1, 0, 3), Z2(1, 1, 3), Z2(0, 0, 0), Z2(1, -1, 3), Z2(-1, 0, 3)},
-        {Z2(1, 1, 3), Z2(0, 0, 0), Z2(0, 0, 0), Z2(1, 0, 3), Z2(1, 0, 3), Z2(1, -1, 3)}
-    };
-    return SO6(z2_matrix);
+    std::set<pattern> perms_of_p = permutation_set(p);
+    for(const pattern &erase : perms_of_p) pattern_set.erase(erase);
 }
 
 /// @brief Reads binary patterns from a file and processes them.
@@ -167,11 +99,15 @@ static SO6 SO6_to_find() {
 ///        inserts all its permutations into a set, and then handles the identity pattern.
 static void read_pattern_file(std::string pattern_file_path)
 {
-    std::ifstream patternFile(pattern_file); // More descriptive variable name
+    if(pattern_file_path.empty()) return;
+
+    std::cout << "[Read] Reading patterns from " << pattern_file << std::endl;
+    
+    std::ifstream patternFile(pattern_file_path); // More descriptive variable name
 
     if (!patternFile.is_open())
     {
-        std::cerr << "Failed to open pattern file: " << pattern_file << std::endl;
+        std::cerr << "Failed to open pattern file: " << pattern_file_path << std::endl;
         return;
     }
 
@@ -183,18 +119,76 @@ static void read_pattern_file(std::string pattern_file_path)
     std::string line;
     while (std::getline(patternFile, line))
     {
-        std::string binaryString = isCSV ? convert_csv_line_to_binary(line) : line;
+        std::string binaryString = isCSV ? utils::convert_csv_line_to_binary(line) : line;
         pattern currentPattern(binaryString); // More descriptive name
         currentPattern.lexicographic_order();
+        // std::cout << currentPattern;
         insert_all_permutations(currentPattern);
     }
 
     patternFile.close(); // Close file after processing
-
     // Handle special case of the identity pattern
     pattern identityPattern = pattern::identity();
     pattern_set.erase(identityPattern);
     pattern_set.erase(identityPattern.pattern_mod());
+    std::cout << "[Finished] Loaded " << pattern_set.size() << " non-identity patterns." << std::endl;
+}
+
+static bool is_valid_pattern(pattern pat) {
+    SO6 S, St;
+    for(int col = 0; col < 6; col++) {
+        for(int row = 0; row < 6; row++) {
+            S[col][row][0]=pat.arr[col][row].first;
+            S[col][row][1]=pat.arr[col][row].second;
+        }
+    }
+    for(int col = 0; col < 6; col++) {
+        for(int row = 0; row < 6; row++) {
+            St[col][row][0]=pat.arr[row][col].first;
+            St[col][row][1]=pat.arr[row][col].second;
+        }
+    }
+
+    S = St*S;
+    for(int col = 0; col < 6; col++) {
+        for(int row = 0; row < 6; row++) {
+            if(!(St[col][row] == 0)) return false;
+        }
+    }
+    return true;
+}
+
+
+/// @brief Reads binary patterns from a file and processes them.
+///        Each line in the file is expected to be a binary string representing a pattern.
+///        This function converts each line into a pattern object, orders it lexicographically,
+///        inserts all its permutations into a set, and then handles the identity pattern.
+static void read_case_file(std::string path)
+{
+    std::ifstream file(path); // More descriptive variable name
+
+    if (!file.is_open())
+    {
+        std::cerr << "Failed to open template file: " << path << std::endl;
+        return;
+    }
+
+     // Renamed for clarity
+    std::string line;
+    while (std::getline(file, line))
+    {
+        std::string binaryString = line;
+        if(line.length()!=36) {
+            std::cout << "Invalid template!\n";
+            std::exit(EXIT_FAILURE);
+        }
+        pattern currentPattern(binaryString); // More descriptive name
+        currentPattern.case_order();
+        cases.push_back(currentPattern);
+        std::cout << currentPattern.case_string();
+        std::cout << "Case number " << currentPattern.case_number() << "\n";
+    }
+    file.close(); // Close file after processing
 }
 
 static std::chrono::_V2::high_resolution_clock::time_point now()
@@ -203,80 +197,32 @@ static std::chrono::_V2::high_resolution_clock::time_point now()
 }
 
 /**
- * @brief Initialize command line arguments passed to main
- * @param argc Number of arguments
- * @param argv List of arguments
+ * @brief Erases the pattern of an SO6 from pattern_set
+ * @param s the SO6 to be erased
  */
-static void setParameters(int argc, char **&argv)
-{
-    if (argc == 1)
-    {
-        std::cout << "usage: main.out -tcount t [-v] [-threads n] [-save] [-recover] [-stored_depth s] [-pattern_file f] [-explicit_search depth] [-transpose_multiply]\n\n";
-        std::exit(EXIT_SUCCESS);
-    }
-    for (int i = 1; i < argc; i++)
-    {
-        if (strcmp(argv[i], "-tcount") == 0)
-        {
-            target_T_count = std::stoi(argv[i + 1]);
-        }
-        if (strcmp(argv[i], "-stored_depth") == 0)
-        {
-            stored_depth_max = std::stoi(argv[i + 1]);
-        }
-        if (strcmp(argv[i], "-pattern_file") == 0)
-        {
-            pattern_file = argv[i + 1];
-        }
-        if (strcmp(argv[i], "-v") == 0)
-        {
-            verbose = true;
-        }
-        if (strcmp(argv[i], "-threads") == 0)
-        {
-            if (strcmp(argv[i + 1], "max") == 0)
-            {
-                THREADS = (uint)std::thread::hardware_concurrency();
-            }
-            else
-            {
-                if (std::stoi(argv[i + 1]) < 0)
-                {
-                    THREADS = std::thread::hardware_concurrency() + std::stoi(argv[i + 1]);
-                }
-                else
-                {
-                    THREADS = std::min(std::stoi(argv[i + 1]), (int)std::thread::hardware_concurrency());
-                }
-            }
+static bool erase_pattern(SO6 &s) {
+    pattern pat = s.to_pattern();
+    bool ret = false;
+    if (pattern_set.find(pat) != pattern_set.end()) {
+        omp_set_lock(&lock);
+        // Double check after grabbing the lock
+        if (pattern_set.find(pat) != pattern_set.end()) {
+            erase_all_permutations(pat);
+            ret = true;
         } 
-        if (strcmp(argv[i], "-save") == 0)
-        {
-            saveResults = true;
-        }
-        if (strcmp(argv[i], "-transpose_multiply") == 0)
-        {
-            transpose_multiply = true;
-        }
-        if (strcmp(argv[i], "-explicit_search") == 0)
-        {
-            explicit_search_mode = true;
-            explicit_search_depth = std::stoi(argv[i + 1]);
-        }
+        omp_unset_lock(&lock);
     }
+    return ret;
+}
 
-    // Make stored_depth_max appropriate
-
-    stored_depth_max = std::min(stored_depth_max,static_cast<uint8_t>(target_T_count - 1));
-
-    std::cout << "[Config] Generating up to T=" << (int)target_T_count << "." << std::endl;
-    std::cout << "[Config] Storing at most T=" << (int)stored_depth_max << " in memory." << std::endl;
-    std::cout << "[Config] Running on " << (int)THREADS << " threads." << std::endl;
-    if(!pattern_file.empty()) {
-        std::cout << "[Config] Pattern file " << pattern_file << std::endl;
-    } else {
-        std::cout << "[Warning] No pattern file." << std::endl;
-    }
+/**
+ * @brief Erases the pattern of an SO6 from pattern_set
+ * @param s the SO6 to be erased
+ */
+static void record_pattern(SO6 &s, std::ofstream& of) {
+    omp_set_lock(&lock);
+    of << s.circuit_string() << std::endl;
+    omp_unset_lock(&lock);
 }
 
 /**
@@ -284,32 +230,7 @@ static void setParameters(int argc, char **&argv)
  * @param s the SO6 to be erased
  */
 static void erase_and_record_pattern(SO6 &s, std::ofstream& of) {
-    pattern pat = s.to_pattern();
-    if (pattern_set.find(pat) != pattern_set.end()) {
-        omp_set_lock(&lock);
-        // Double check after grabbing the lock
-        if (pattern_set.find(pat) != pattern_set.end()) {
-            erase_all_permutations(pat);
-            of << s.circuit_string() << std::endl;
-        }
-        omp_unset_lock(&lock);
-    }
-}
-
-/**
- * @brief Erases the pattern of an SO6 from pattern_set
- * @param s the SO6 to be erased
- */
-static void erase_pattern(SO6 &s) {
-    pattern pat = s.to_pattern();
-    if (pattern_set.find(pat) != pattern_set.end()) {
-        omp_set_lock(&lock);
-        // Double check after grabbing the lock
-        if (pattern_set.find(pat) != pattern_set.end()) {
-            erase_all_permutations(pat);
-        }
-        omp_unset_lock(&lock);
-    }
+    if(erase_pattern(s)) record_pattern(s,of);
 }
 
 /// @brief Reads dat file and prints string of gates circuit
@@ -320,42 +241,11 @@ static void read_dat(std::string file_name) {
     std::ofstream null_stream("/dev/null");
     if (file.is_open()) {
         while (getline(file, line)) {
-            SO6 s = SO6::reconstruct(line);
+            SO6 s = SO6::reconstruct_from_circuit_string(line);
             std::cout << "current size: " << pattern_set.size() << "\n";
             erase_pattern(s);
             std::cout << s.circuit_string() << "\n";
         }
-    }
-}
-
-/**
- * @brief Checks whether an SO6 is one that we are explicitly searching for
- * @param s the SO6 we're attempting to find
- */
-static void find_specific_matrix(SO6 &s)
-{
-    if (!explicit_search_mode)
-        return;
-    if (explicit_search_set.find(s) != explicit_search_set.end())
-    {
-        SO6 found = *explicit_search_set.find(s);
-        std::cout << "\n[Break] Found the matrix we were looking for with name: " << SO6::name_as_num(s.name());
-        std::cout << "\n[Break] Generated from search_token by: " << SO6::name_as_num(found.name()) << "\n";
-        std::vector<unsigned char> hist = found.hist;
-        SO6 tmp = s;
-        std::reverse(hist.begin(),hist.end());
-        for (unsigned char i : hist)
-        {
-            if(i>15) {
-                s = s.left_multiply_by_T((i>>4)-1);
-            }
-            s = s.left_multiply_by_T((i & 15) -1);
-        }
-        if (s==search_token)
-        {
-            std::cout << "[Break] Search_token has name: " << SO6::name_as_num(s.name()) << "\n[Break] Exiting." << std::endl;
-        }
-        std::exit(0);
     }
 }
 
@@ -372,33 +262,6 @@ static std::string time_since(std::chrono::_V2::high_resolution_clock::time_poin
     if (time < 86400000)
         return std::to_string((float)time / 3600000).substr(0, 5).append("hr");
     return std::to_string((float)time / 86400000).substr(0, 5).append("days");
-}
-
-static void configure()
-{
-    stored_depth_max = std::min((int)target_T_count - 1, (int)stored_depth_max);
-
-    if (stored_depth_max < target_T_count / 2)
-    { // Parameter check
-        std::cout << "stored_depth bad\n";
-        std::exit(EXIT_FAILURE);
-    }
-
-    // Load search criteria
-    if (!pattern_file.empty())
-    {
-        std::cout << "[Read] Reading patterns from " << pattern_file << std::endl;
-        read_pattern_file(pattern_file);
-        std::cout << "[Finished] Loaded " << pattern_set.size() << " non-identity patterns." << std::endl;
-    }
-    if (explicit_search_mode)
-    {
-        // build_explicit_search_token();
-        std::cout << "[Start] Generating lookup table for token=\n"
-                  << search_token;
-        // build_explicit_search_set(explicit_search_depth);
-        std::cout << "[Finished] Lookup table contains " << explicit_search_set.size() << " unique SO6s." << std::endl;
-    }
 }
 
 /**
@@ -437,7 +300,6 @@ static void finish_io(const uint &matrices_found, const bool b, std::ofstream &o
     of.close();
 }
 
-
 static std::ofstream prepare_T_count_io(const int t, uint8_t &stored_depth_max, uint8_t &target_T_count) {
     int free_multiply_depth = utils::free_multiply_depth(target_T_count,stored_depth_max);
     // Begin reporting for T=1 with specific depth information
@@ -466,7 +328,6 @@ static std::ofstream prepare_T_count_io(const int t, uint8_t &stored_depth_max, 
                 << " ||\t↪ [Patterns] " << pattern_set.size() << " patterns remain." << std::endl;
     return of;
 }
-
 
 /**
  * @brief Store specific cosets T_0{curr} based on the current T count and free multiply depth.
@@ -506,19 +367,42 @@ void storeCosets(int curr_T_count,
  */
 int main(int argc, char **argv)
 {
-    search_token = SO6_to_find();
-    auto program_init_time = now(); // Begin timekeeping
-    setParameters(argc, argv);      // Initialize parameters to command line argument
-    configure();                    // Configure the search
+    auto program_init_time = now();          // Begin timekeeping
+    Globals::setParameters(argc, argv);      // Initialize parameters to command line argument
+    Globals::configure();                    // Configure the globals to remove inconsistencies
 
+    read_pattern_file(pattern_file);
+    read_case_file(case_file);
+
+    SO6 case_representative = SO6::reconstruct_from_circuit_string("5 2 0 6 12 1 4 13 12 4 2 9 0");
+    pattern case_pattern = case_representative.to_pattern();
+    case_pattern.case_order();
+
+    // std::ifstream file("./data/reductions/circuits.dat"); // More descriptive variable name
+    // std::string line;
+    // while (std::getline(file, line))
+    // {
+    //     SO6 found = SO6::reconstruct_from_circuit_string(line);
+    //     found = case_representative*found;
+    //     std::cout << found.circuit_string() << "\n";
+    //     std::exit(0);
+    //     pattern to_print = found.to_pattern();
+    //     to_print.case_order();
+    //     std::cout << to_print.case_string();
+    // }
+
+    // std::exit(0);
+
+    // std::cout << p.case_string();
+    // std::exit(EXIT_SUCCESS);
     SO6 root = SO6::identity();
+    // root = SO6::reconstruct_from_circuit_string("10 4 8 6 0 9 1 5 2 0");
     set<SO6> prior, current = std::set<SO6>({root});
 
     // This stores the generating sets. Note that the initial generating set is just the 15 T matrices and, thus, doesn't need to be stored
     int ngs = utils::num_generating_sets(target_T_count, stored_depth_max);
 
     std::vector<SO6> generating_set[ngs];    
-    std::string file_string;
 
     for (int curr_T_count = 0; curr_T_count < stored_depth_max; ++curr_T_count)
     {
@@ -560,11 +444,21 @@ int main(int argc, char **argv)
 
     for (int curr_T_count = stored_depth_max; curr_T_count < target_T_count; ++curr_T_count)
     {    
+        if(curr_T_count < target_T_count -1 && cases_flag) continue; // Skip ahead until we are at the target
+
         std::ofstream of = prepare_T_count_io(curr_T_count+1,stored_depth_max, target_T_count);
+
+        std::vector<std::ofstream> file_stream(THREADS);
+        for(int i=0; i < THREADS; i++) {
+            std::string file_name = "./data/reductions/thread" + std::to_string(i) + ".dat";
+            file_stream[i].open(file_name, std::ios::out | std::ios::trunc);
+        }
+
         omp_init_lock(&lock);
         #pragma omp parallel for schedule(static, interval_size) num_threads(THREADS)
         for (uint64_t i = 0; i < set_size; i++)
         {
+            int current_thread = omp_get_thread_num();
             const SO6 &S = to_compute.at(i); 
             if (omp_get_thread_num() == 0)
                 report_percent_complete(i % interval_size, interval_size);
@@ -572,19 +466,38 @@ int main(int argc, char **argv)
             if (curr_T_count == stored_depth_max)
             {
                 SO6 N = S.left_multiply_by_T(0);
-                erase_and_record_pattern(N, of);
-                continue;
+                if(!cases_flag) {
+                    erase_and_record_pattern(N, of);
+                    continue;
+                }
+
+                for(pattern P : cases) {
+                    SO6 post = P*N;
+                    if(post.getLDE() == -1) {
+                        file_stream[current_thread] << N.circuit_string() << std::endl;
+                    }
+                }
             }
  
             for (const SO6 &G : generating_set[curr_T_count-stored_depth_max - 1])
             {
-                SO6 N = G*S;
-                erase_and_record_pattern(N, of);
-                
+                SO6 N = G*S; 
+
+                if(!cases_flag) {
+                    erase_and_record_pattern(N, of);
+                    continue;
+                }
+
+                SO6 post = N*case_representative;
+                if(case_representative.getLDE() - post.getLDE() == 1) {
+                    pattern postPattern = post.to_pattern();
+                    if(postPattern.case_number()!=8) file_stream[current_thread] << N.circuit_string() << std::endl;
+                }
             }
         }
         omp_destroy_lock(&lock);
         finish_io(0, false, of);
+        for(auto &stream : file_stream) stream.close();
     }
     std::cout << " ||\n[Finished] Free multiply complete.\n\n[Time] Total time elapsed: " << time_since(program_init_time) << std::endl;
     return 0;
