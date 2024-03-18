@@ -464,7 +464,6 @@ int main(int argc, char **argv)
             for (const SO6 &G : generating_set[curr_T_count-stored_depth_max - 1])
             {
                 SO6 N = G*S; 
-
                 if(!cases_flag) {
                     erase_and_record_pattern(N, of);
                     continue;
