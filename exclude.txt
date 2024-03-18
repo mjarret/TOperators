@@ -1,0 +1,11 @@
+Makefile
+Makefile.bak
+PackedByte*
+*.pdf
+History*
+*workspace*
+runme.sh
+*.txt
+data.zip
+runOnCluster.sh
+.*/

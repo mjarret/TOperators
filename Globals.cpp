@@ -14,13 +14,15 @@ std::chrono::duration<double> timeelapsed = std::chrono::duration<double>::zero(
 // Pattern handling and search settings
 std::set<pattern> pattern_set;          
 std::vector<pattern> cases;
-std::set<SO6> explicit_search_set;
 std::string pattern_file = "";
 std::string case_file = "";
+std::string root_string ="";
+SO6 root;
 
 // Configuration and state variables
 uint8_t target_T_count = 8;            
 uint8_t stored_depth_max = 255;
+uint8_t num_gen_sets = 1;
 bool cases_flag = false;
 
 void Globals::setParameters(int argc, char *argv[]) {
@@ -34,21 +36,19 @@ void Globals::setParameters(int argc, char *argv[]) {
         desc.add_options()
             ("help,h", "produce help message")
             ("tcount,t", po::value<int>(&tcount_param)->default_value(8), "target T count")
-            ("stored_depth,d", po::value<int>(&stored_depth_param)->default_value(0), "maximum stored depth")
+            ("stored_depth,s", po::value<int>(&stored_depth_param)->default_value(0), "maximum stored depth")
             ("pattern_file,f", po::value<std::string>(&pattern_file), "pattern file")
             ("verbose,v", po::bool_switch(), "enable verbosity")
             ("threads,n", po::value<std::string>()->default_value(std::to_string(std::thread::hardware_concurrency()-1)), "number of threads")
-            // ("save", po::bool_switch(&saveResults), "save results")
-            ("recover", "recover (no functionality)")
-            // ("transpose_multiply", po::bool_switch(&transpose_multiply), "transpose multiply")
-            // ("explicit_search", po::value<int>(&explicit_search_depth)->implicit_value(1), "explicit search depth")
-            ("cases", po::value<std::string>(&case_file), "cases (original code missing functionality)");
+            ("root,r", po::value<std::string>(), "set the root of the search tree by specifying a circuit.")
+            ("cases,c", po::bool_switch(&cases_flag), "flag to tell code whether we are looking for specific cases (not used).");
         po::variables_map vm;
         po::store(po::parse_command_line(argc, argv, desc), vm);
         po::notify(vm);
 
         target_T_count = (uint8_t) (std::max(1,tcount_param));
         stored_depth_max = (uint8_t) stored_depth_param;
+        num_gen_sets = utils::num_generating_sets(target_T_count, stored_depth_max);
    
         if (vm.count("help")) {
             std::cout << desc << "\n";
@@ -59,7 +59,6 @@ void Globals::setParameters(int argc, char *argv[]) {
             if(vm["threads"].as<std::string>() == "max") {
                 THREADS = std::thread::hardware_concurrency();
             } else {
-                std::cout << vm["threads"].as<std::string>();
                 THREADS = (uint8_t) std::stoi(vm["threads"].as<std::string>());
             }
         }
@@ -88,15 +87,45 @@ void Globals::configure()
     std::cout << "[Config] Storing at most T=" << (int) stored_depth_max << " in memory.\n";
     std::cout << "[Config] Running on " << (int) THREADS << " threads.\n";
     if (!pattern_file.empty()) {
-        std::cout << "[Config] Pattern file " << pattern_file << "\n";
+        std::cout << "[Config] Searching for patterns in file " << pattern_file << "\n";
     } else {
-        std::cout << "[Warning] No pattern file.\n";
+        std::cout << "[Config] No pattern file.\n";
     }
 
     if (!case_file.empty()) {
         std::cout << "[Config] Cases file " << case_file << "\n";
         cases_flag=true;
     } 
+
+    root = SO6::reconstruct_from_circuit_string(root_string);
+    if (root_string.empty()) {
+        std::cout << "[Config] No root specified. Using identity.\n";
+    } else {
+        std::cout << "[Config] Root specified: " << root_string << "\n";
+    }
+
+    if (cases_flag) {
+        std::cout << "[Config] Looking for specific cases.\n";
+    } else {
+        std::cout << "[Config] Looking for all cases.\n";
+    }
+
+    // if (verbose) {
+    //     std::cout << "[Config] Verbose mode enabled.\n";
+    // }
+
+    // if (transpose_multiply) {
+    //     std::cout << "[Config] Transpose multiply enabled.\n";
+    // }
+
+    // if (explicit_search_mode) {
+    //     std::cout << "[Config] Explicit search mode enabled.\n";
+    // }
+
+    // if (saveResults) {
+    //     std::cout << "[Config] Saving results to file.\n";
+    // }
+    // SO6 case_representative = SO6::reconstruct_from_circuit_string("5 2 0 6 12 1 4 13 12 4 2 9 0");
 }
 
 

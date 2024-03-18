@@ -183,6 +183,41 @@ SO6 SO6::operator*(const pattern &other) const
 }
 
 
+/**
+ * @brief Performs a left multiplication of this SO(6) matrix by a specific T matrix.
+ *
+ * This function multiplies the current SO(6) matrix by a T matrix identified by 
+ * indices `i` and `j` and updates its internal state based on the parameter `p`. 
+ * The operation is row-dependent and independent of the matrix's initial permutation.
+ * The resulting matrix is reordered in lexicographic order and returned as a new SO6 object.
+ *
+ * @param i The first index for the T matrix (row index), integral part of specifying the T matrix.
+ * @param j The second index for the T matrix (row index), must be greater than `i`.
+ * @param p An unsigned char value used to index Tₚ
+ * @return SO6 The product of the multiplication, returned as a new SO6 object.
+ *
+ * @note The function ensures that `j` is always greater than `i`, which is essential for
+ *       defining the specific T matrix multiplication. The lexicographic ordering of the
+ *       resulting matrix is maintained.
+ */
+SO6 SO6::left_multiply_by_T(const int &row1, const int &row2, const unsigned char &p) const
+{
+    SO6 prod = *this;
+
+    for (int col = 0; col < 6; col++)
+    {
+        prod[col][row1] += (*this)[col][row2];
+        prod[col][row1].increaseDE();
+        prod[col][row2] -= (*this)[col][row1];
+        prod[col][row2].increaseDE();
+    }
+    prod.lexicographic_order();
+    prod.update_history(p);
+    return prod;
+}
+
+
+
 /// @brief Left multiply this by a T operator
 /// @param i the index of T_i
 /// @return the result T_i * this
@@ -238,39 +273,6 @@ void SO6::update_history(const unsigned char &p) {
         // Pack the new entry into the higher 4 bits of the last byte
         hist.back() |= (p << 4);
     }
-}
-
-/**
- * @brief Performs a left multiplication of this SO(6) matrix by a specific T matrix.
- *
- * This function multiplies the current SO(6) matrix by a T matrix identified by 
- * indices `i` and `j` and updates its internal state based on the parameter `p`. 
- * The operation is row-dependent and independent of the matrix's initial permutation.
- * The resulting matrix is reordered in lexicographic order and returned as a new SO6 object.
- *
- * @param i The first index for the T matrix (row index), integral part of specifying the T matrix.
- * @param j The second index for the T matrix (row index), must be greater than `i`.
- * @param p An unsigned char value used to index Tₚ
- * @return SO6 The product of the multiplication, returned as a new SO6 object.
- *
- * @note The function ensures that `j` is always greater than `i`, which is essential for
- *       defining the specific T matrix multiplication. The lexicographic ordering of the
- *       resulting matrix is maintained.
- */
-SO6 SO6::left_multiply_by_T(const int &i, const int &j, const unsigned char &p) const
-{
-    SO6 prod = *this;
-
-    for (int col = 0; col < 6; col++)
-    {
-        prod[col][i] += (*this)[col][j];
-        prod[col][i].increaseDE();
-        prod[col][j] -= (*this)[col][i];
-        prod[col][j].increaseDE();
-    }
-    prod.lexicographic_order();
-    prod.update_history(p);
-    return prod;
 }
 
 /// @brief This implements insertion sort
@@ -381,13 +383,13 @@ SO6 SO6::reconstruct_from_circuit_string(const std::string& input) {
     std::istringstream iss(input);
     int number;
     SO6 ret = SO6::identity();
-
+    // ret.unpermuted_print();
     // Iterate over each integer in the string
     while (iss >> number) {
         // Process each number, for example, print it
         ret = ret.left_multiply_by_T(number);
     }    
-    
+    // ret.unpermuted_print();
     return ret;
 }
 

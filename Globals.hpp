@@ -22,14 +22,17 @@ extern std::chrono::duration<double> timeelapsed;
 extern std::set<pattern> pattern_set;
 extern std::set<pattern> case_set;
 extern std::vector<pattern> cases;
-extern std::set<SO6> explicit_search_set;
-extern SO6 search_token;
+// extern std::set<SO6> explicit_search_set;
+// extern SO6 search_token;
 extern std::string pattern_file;
 extern std::string case_file;
+extern SO6 root;
+extern std::string root_string;
 
 // Configuration and state variables
 extern uint8_t target_T_count;
 extern uint8_t stored_depth_max;
+extern uint8_t num_gen_sets;
 extern bool saveResults;
 extern bool verbose;
 extern bool transpose_multiply;

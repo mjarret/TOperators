@@ -158,7 +158,6 @@ static bool is_valid_pattern(pattern pat) {
     return true;
 }
 
-
 /// @brief Reads binary patterns from a file and processes them.
 ///        Each line in the file is expected to be a binary string representing a pattern.
 ///        This function converts each line into a pattern object, orders it lexicographically,
@@ -365,38 +364,23 @@ void storeCosets(int curr_T_count,
  * @param argv vector of command line arguments
  * @return 0
  */
+/**
+ * @brief The main function of the program.
+ *
+ * This function is the entry point of the program. It initializes the necessary parameters,
+ * reads pattern and case files, performs various operations on the data, and outputs the results.
+ *
+ * @param argc The number of command-line arguments.
+ * @param argv An array of command-line arguments.
+ * @return The exit status of the program.
+ */
 int main(int argc, char **argv)
 {
     auto program_init_time = now();          // Begin timekeeping
     Globals::setParameters(argc, argv);      // Initialize parameters to command line argument
     Globals::configure();                    // Configure the globals to remove inconsistencies
-
     read_pattern_file(pattern_file);
-    read_case_file(case_file);
 
-    SO6 case_representative = SO6::reconstruct_from_circuit_string("5 2 0 6 12 1 4 13 12 4 2 9 0");
-    pattern case_pattern = case_representative.to_pattern();
-    case_pattern.case_order();
-
-    // std::ifstream file("./data/reductions/circuits.dat"); // More descriptive variable name
-    // std::string line;
-    // while (std::getline(file, line))
-    // {
-    //     SO6 found = SO6::reconstruct_from_circuit_string(line);
-    //     found = case_representative*found;
-    //     std::cout << found.circuit_string() << "\n";
-    //     std::exit(0);
-    //     pattern to_print = found.to_pattern();
-    //     to_print.case_order();
-    //     std::cout << to_print.case_string();
-    // }
-
-    // std::exit(0);
-
-    // std::cout << p.case_string();
-    // std::exit(EXIT_SUCCESS);
-    SO6 root = SO6::identity();
-    // root = SO6::reconstruct_from_circuit_string("10 4 8 6 0 9 1 5 2 0");
     set<SO6> prior, current = std::set<SO6>({root});
 
     // This stores the generating sets. Note that the initial generating set is just the 15 T matrices and, thus, doesn't need to be stored
@@ -416,7 +400,7 @@ int main(int argc, char **argv)
             for(const SO6& S : current)
             {
                 SO6 toInsert = S.left_multiply_by_T(T);
-                if (next.insert(toInsert).second)               // Want to insert toInsert no matter what, if we haven't seen this
+                if (next.insert(toInsert).second)                              // Want to insert toInsert no matter what, if we haven't seen this
                 { 
                     if(T==0) erase_and_record_pattern(toInsert, of);           // Only erase the pattern if the last T operation was done by 0, since we'll do things up to permutation?
                 }
@@ -444,15 +428,13 @@ int main(int argc, char **argv)
 
     for (int curr_T_count = stored_depth_max; curr_T_count < target_T_count; ++curr_T_count)
     {    
-        if(curr_T_count < target_T_count -1 && cases_flag) continue; // Skip ahead until we are at the target
-
         std::ofstream of = prepare_T_count_io(curr_T_count+1,stored_depth_max, target_T_count);
 
         std::vector<std::ofstream> file_stream(THREADS);
-        for(int i=0; i < THREADS; i++) {
-            std::string file_name = "./data/reductions/thread" + std::to_string(i) + ".dat";
-            file_stream[i].open(file_name, std::ios::out | std::ios::trunc);
-        }
+        // for(int i=0; i < THREADS; i++) {
+        //     std::string file_name = "./data/reductions/thread" + std::to_string(i) + ".dat";
+        //     file_stream[i].open(file_name, std::ios::out | std::ios::trunc);
+        // }
 
         omp_init_lock(&lock);
         #pragma omp parallel for schedule(static, interval_size) num_threads(THREADS)
@@ -471,12 +453,12 @@ int main(int argc, char **argv)
                     continue;
                 }
 
-                for(pattern P : cases) {
-                    SO6 post = P*N;
-                    if(post.getLDE() == -1) {
-                        file_stream[current_thread] << N.circuit_string() << std::endl;
-                    }
-                }
+                // for(pattern P : cases) {
+                //     SO6 post = P*N;
+                //     if(post.getLDE() == -1) {
+                //         file_stream[current_thread] << N.circuit_string() << std::endl;
+                //     }
+                // }
             }
  
             for (const SO6 &G : generating_set[curr_T_count-stored_depth_max - 1])
@@ -486,12 +468,6 @@ int main(int argc, char **argv)
                 if(!cases_flag) {
                     erase_and_record_pattern(N, of);
                     continue;
-                }
-
-                SO6 post = N*case_representative;
-                if(case_representative.getLDE() - post.getLDE() == 1) {
-                    pattern postPattern = post.to_pattern();
-                    if(postPattern.case_number()!=8) file_stream[current_thread] << N.circuit_string() << std::endl;
                 }
             }
         }
