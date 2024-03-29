@@ -67,11 +67,11 @@ SO6 pattern::operator*(const SO6 &other) const
     {
         for (int k = 0; k < 6; k++)
         {
-            const Z2& left_element = other.unpermuted(col,k);            
-            if (left_element[0] == 0) continue;    
+            const Z2& left_element = other[col][k];            
+            if (left_element.intPart == 0) continue;    
             
             Z2 smallerLDE = left_element;
-            smallerLDE[2]--; //decrease lde
+            smallerLDE.exponent--; //decrease lde
 
             for (int row = 0; row < 6; row++)
             { 

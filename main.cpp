@@ -138,14 +138,14 @@ static bool is_valid_pattern(pattern pat) {
     SO6 S, St;
     for(int col = 0; col < 6; col++) {
         for(int row = 0; row < 6; row++) {
-            S[col][row][0]=pat.arr[col][row].first;
-            S[col][row][1]=pat.arr[col][row].second;
+            S[col][row].intPart=pat.arr[col][row].first;
+            S[col][row].sqrt2Part=pat.arr[col][row].second;
         }
     }
     for(int col = 0; col < 6; col++) {
         for(int row = 0; row < 6; row++) {
-            St[col][row][0]=pat.arr[row][col].first;
-            St[col][row][1]=pat.arr[row][col].second;
+            St[col][row].intPart=pat.arr[row][col].first;
+            St[col][row].sqrt2Part=pat.arr[row][col].second;
         }
     }
 
@@ -376,6 +376,8 @@ void storeCosets(int curr_T_count,
  */
 int main(int argc, char **argv)
 {
+
+
     auto program_init_time = now();          // Begin timekeeping
     Globals::setParameters(argc, argv);      // Initialize parameters to command line argument
     Globals::configure();                    // Configure the globals to remove inconsistencies
@@ -475,5 +477,6 @@ int main(int argc, char **argv)
         for(auto &stream : file_stream) stream.close();
     }
     std::cout << " ||\n[Finished] Free multiply complete.\n\n[Time] Total time elapsed: " << time_since(program_init_time) << std::endl;
+    std::cout << " Even calls: " << counter_even << " Odd calls: " << counter_odd << " Zero calls: " << counter_zero << std::endl;
     return 0;
 }

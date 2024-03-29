@@ -6,6 +6,7 @@
 #include <algorithm>
 #include "SO6.hpp"
 #include "pattern.hpp"
+#include "Globals.hpp"
 
 /**
  * Method to compare two Z2 arrays of length 6 lexicographically
@@ -19,28 +20,26 @@ int8_t SO6::lexicographical_compare(const Z2 first[6],const Z2 second[6])
     bool first_is_negative = false;
     bool second_is_negative = false;
     int row;
-
     // We search for the first nonzero row of first and if on the way we encounter a nonzero row of second, 
     // we immediately claim second is larger. If both are nonzero, we compare them
     // the goal is to "fix" the sign convention of the row so that the entire
     // column is sorted such that the top element is positive by multiplying everything by -1
     for (row = 0; row < 6; row++)
     {
-        if (first[row][0] == 0) {
-            if(second[row][0] == 0) {
+        if (first[row].intPart == 0) {
+            if(second[row].intPart == 0) {
                 continue;
             }
             return 1;
         }
-        if (second[row][0] == 0) {
+        if (second[row].intPart == 0) {
             return -1;
         }
 
         // Now both first and second are nonzero
-        first_is_negative = first[row].is_negative();
-        second_is_negative = second[row].is_negative();
-        // if (first[row] < Z2(0,0,0)) first_is_negative = true;
-        // if (second[row] < Z2(0,0,0)) second_is_negative = true;
+        // first_is_negative = first[row].is_negative();
+        first_is_negative = (first[row].intPart < 0) ;
+        second_is_negative = (second[row].intPart < 0);
         break;
     }
 
@@ -86,6 +85,143 @@ int8_t SO6::lexicographical_compare(const Z2 first[6],const Z2 second[6])
 
 /**
  * Method to compare two Z2 arrays of length 6 lexicographically
+ * we are given the guarantee that the first nonzero element in the row is non-negative
+ * @param first array of Z2 of length 6
+ * @param second array of Z2 of length 6
+ * @return -1 if first < second, 0 if equal, 1 if first > second
+ */
+int8_t SO6::lexicographical_compare(const int &col1,const int & col2)
+{
+    bool first_is_negative = false;
+    bool second_is_negative = false;
+    int row;
+    // We search for the first nonzero row of first and if on the way we encounter a nonzero row of second, 
+    // we immediately claim second is larger. If both are nonzero, we compare them
+    // the goal is to "fix" the sign convention of the row so that the entire
+    // column is sorted such that the top element is positive by multiplying everything by -1
+    for (row = 0; row < 6; row++)
+    {
+        if (arr[get_index(row,col1)].intPart == 0) {
+            if(arr[get_index(row,col2)].intPart == 0) {
+                continue;
+            }
+            return 1;
+        }
+        if (arr[get_index(row,col2)].intPart == 0) {
+            return -1;
+        }
+
+        // Now both first and second are nonzero
+        // first_is_negative = arr[get_index(col1,row)].is_negative();
+        first_is_negative = (arr[get_index(row,col1)].intPart < 0) ;
+        second_is_negative = (arr[get_index(row,col2)].intPart < 0);
+        break;
+    }
+
+    // compare remaining rows until return
+    if(!first_is_negative) {
+        if(!second_is_negative) {
+        while (row < 6) {
+                if(arr[get_index(row,col1)] == arr[get_index(row,col2)]) {
+                    row++;
+                    continue;
+                }
+                if(arr[get_index(row,col2)] < arr[get_index(row,col1)]) return -1;
+                return 1;
+            }
+            return 0;
+        }
+        for (row; row < 6; row++)
+            {
+                if(arr[get_index(row,col1)] == -arr[get_index(row,col2)]) continue;
+                if(-arr[get_index(row,col2)] < arr[get_index(row,col1)]) return -1;
+                return 1;
+            }
+        return 0;
+    }
+    //first is negative now
+    if(!second_is_negative) {
+        for (row; row < 6; row++) {
+                if(-arr[get_index(row,col1)] == arr[get_index(row,col2)]) continue;
+                if(arr[get_index(row,col2)] < -arr[get_index(row,col1)]) return -1;
+                return 1;
+            }
+        return 0;
+    }
+
+    //both are negative
+    for (int i = row; i < 6; i++)    {
+        if(arr[get_index(i,col1)] == arr[get_index(i,col2)]) continue;
+        if(-arr[get_index(i,col2)] < -arr[get_index(i,col1)]) return -1;
+        return 1;
+    }
+    return 0;
+}
+
+bool SO6::lexicographical_less(const int &col1,const int & col2)
+{
+    bool first_is_negative = false;
+    bool second_is_negative = false;
+    int row;
+    // We search for the first nonzero row of first and if on the way we encounter a nonzero row of second, 
+    // we immediately claim second is larger. If both are nonzero, we compare them
+    // the goal is to "fix" the sign convention of the row so that the entire
+    // column is sorted such that the top element is positive by multiplying everything by -1
+    for (row = 0; row < 6; row++)
+    {
+        if (arr[get_index(row,col1)].intPart == 0) {
+            if(arr[get_index(row,col2)].intPart == 0) {
+                continue;
+            }
+            return false;
+        }
+        if (arr[get_index(row,col2)].intPart == 0) {
+            return true;
+        }
+
+        // Now both first and second are nonzero
+        // first_is_negative = arr[get_index(col1,row)].is_negative();
+        first_is_negative = (arr[get_index(row,col1)].intPart < 0) ;
+        second_is_negative = (arr[get_index(row,col2)].intPart < 0);
+        break;
+    }
+    
+    // compare remaining rows until return
+    
+    if(!first_is_negative) {
+        if(!second_is_negative) {
+            for (row; row < 6; ++row) {
+                    if(arr[get_index(row,col2)] < arr[get_index(row,col1)])  return true;
+                    if(arr[get_index(row,col1)] < arr[get_index(row,col2)]) return false;
+                }
+            return false;
+        }
+        for (row; row < 6; ++row) {
+                if(-arr[get_index(row,col2)] < arr[get_index(row,col1)])  return true;
+                if(arr[get_index(row,col1)] < -arr[get_index(row,col2)])  return false;
+            }
+        return false;
+    }
+    //first is negative now
+    if(!second_is_negative) {
+        for (row; row < 6; ++row) {
+                    if(-arr[get_index(row,col1)] < arr[get_index(row,col2)]) return false;
+                    if(arr[get_index(row,col2)] < -arr[get_index(row,col1)]) return true;
+            }
+        return false;
+    }
+    //both are negative
+    for (row; row < 6; ++row)    {
+        if(-arr[get_index(row,col1)] < -arr[get_index(row,col2)]) return false;
+        if(-arr[get_index(row,col2)] == -arr[get_index(row,col1)]) continue;
+        return true;
+    }
+    return false;
+}
+
+
+/**
+ * Method to compare two Z2 arrays of length 6 lexicographically
  * @param first array of Z2 of length 6
  * @param second array of Z2 of length 6
  * @return -1 if first < second, 0 if equal, 1 if first > second
@@ -94,6 +230,18 @@ bool SO6::lexicographical_less(const Z2 first[6],const Z2 second[6])
 {
     return (SO6::lexicographical_compare(first,second)<0);
 }
+
+// /**
+//  * Method to compare two Z2 arrays of length 6 lexicographically
+//  * @param first array of Z2 of length 6
+//  * @param second array of Z2 of length 6
+//  * @return -1 if first < second, 0 if equal, 1 if first > second
+//  */
+// bool SO6::lexicographical_less(const int &col1,const int &col2)
+// {
+//     return (lexicographical_compare(col1,col2)<0);
+// }
+
 
 /**
  * Basic constructor. Initializes Zero matrix.
@@ -111,7 +259,7 @@ SO6::SO6(Z2 other[6][6])
 {
     for(int col =0; col<6; col++) {
         for(int row=0; row <6; row++) {
-            arr[col][row]=other[col][row];
+            *this[col][row]=other[col][row];
         }
     }
 }
@@ -133,22 +281,22 @@ SO6 SO6::operator*(const SO6 &other) const
     std::copy(other.hist.begin(), other.hist.end(), std::back_inserter(prod.hist));
     std::copy(hist.begin(), hist.end(), std::back_inserter(prod.hist));
 
-    for (int row = 0; row < 6; row++)
+    for (int row = 0; row < 6; ++row)
     {
-        for (int k = 0; k < 6; k++)
+        for (int k = 0; k < 6; ++k)
         {
-            const Z2& left_element = (this->unpermuted(k,row));
-            if (left_element[0] == 0) continue;    
-            for (int col = 0; col < 6; col++)
+            const Z2& left_element = *this[k][row];
+            if (left_element.intPart == 0) continue;    
+            for (int col = 0; col < 6; ++col)
             { 
-                if((other.unpermuted(col,k))[0] == 0) continue;
-                prod[col][row] += (left_element * other.unpermuted(col,k)); 
+                if((other[col][k]).intPart == 0) continue; 
+                prod[col][row] += (left_element * other[col][k]); 
             }
         }
     }
-    // prod.lexicographic_order(); // This is no longer useful to us, I think
     return prod;
 }
+
 
 /**
  * Overloads the * operator with matrix multiplication for SO6 objects
@@ -161,15 +309,15 @@ SO6 SO6::operator*(const pattern &other) const
     SO6 prod;
     prod.hist = hist; // patterns don't typically have histories in this code base, could be changed but currently not so 
 
-    for (int row = 0; row < 6; row++)
+    for (int row = 0; row < 6; ++row)
     {
-        for (int k = 0; k < 6; k++)
+        for (int k = 0; k < 6; ++k)
         {
-            const Z2& left_element = (this->unpermuted(k,row));            
-            if (left_element[0] == 0) continue;    
+            const Z2& left_element = *this[k][row];            
+            if (left_element.intPart == 0) continue;    
             
             Z2 smallerLDE = left_element;
-            smallerLDE[2]--; //decrease lde
+            smallerLDE.exponent--; //decrease lde
 
             for (int col = 0; col < 6; col++)
             { 
@@ -178,7 +326,6 @@ SO6 SO6::operator*(const pattern &other) const
             }
         }
     }
-    // prod.lexicographic_order(); // This is no longer useful to us, I think
     return prod;
 }
 
@@ -206,17 +353,15 @@ SO6 SO6::left_multiply_by_T(const int &row1, const int &row2, const unsigned cha
 
     for (int col = 0; col < 6; col++)
     {
-        prod[col][row1] += (*this)[col][row2];
-        prod[col][row1].increaseDE();
-        prod[col][row2] -= (*this)[col][row1];
-        prod[col][row2].increaseDE();
+        prod.get_element(row1,col) += arr[(col<<2) + (col<<1) + row2];
+        prod.get_element(row1,col).increaseDE();
+        prod.get_element(row2,col) -= arr[(col<<2) + (col<<1) + row1];
+        prod.get_element(row2,col).increaseDE();
     }
     prod.lexicographic_order();
     prod.update_history(p);
     return prod;
 }
-
-
 
 /// @brief Left multiply this by a T operator
 /// @param i the index of T_i
@@ -276,32 +421,47 @@ void SO6::update_history(const unsigned char &p) {
 }
 
 /// @brief This implements insertion sort
-void SO6::lexicographic_order()
-{
+// void SO6::lexicographic_order()
+// {
+//     int inverse_permutation[6] = {0,1,2,3,4,5};
+//     for(int i = 0; i < 6; i++) {
+//         inverse_permutation[permutation[i]] = i;
+//     }
 
-    int inverse_permutation[6] = {0,1,2,3,4,5};
-    for(int i = 0; i < 6; i++) {
-        inverse_permutation[permutation[i]] = i;
-    }
+//     for (int i = 1; i < 6; i++)
+//     {
+//         int j = i;
+//         while (j > 0 && SO6::lexicographical_less(arr[j], arr[j - 1]))
+//         {
+//             // Swap the actual Z2 arrays in-place
+//             for (int k = 0; k < 6; k++) {
+//                 std::swap(arr[j][k], arr[j - 1][k]);
+//             }
+//             // Swap the corresponding indices in the permutation array
+//             std::swap(inverse_permutation[j], inverse_permutation[j - 1]); 
+//             j--;
+//         }
+//     }
 
-    for (int i = 1; i < 6; i++)
-    {
-        int j = i;
-        while (j > 0 && SO6::lexicographical_less(arr[j], arr[j - 1]))
-        {
-            // Swap the actual Z2 arrays in-place
-            for (int k = 0; k < 6; k++) {
-                std::swap(arr[j][k], arr[j - 1][k]);
-            }
-            // Swap the corresponding indices in the permutation array
-            std::swap(inverse_permutation[j], inverse_permutation[j - 1]); 
-            j--;
-        }
-    }
+//     for(int i = 0; i < 6; i++) {
+//         permutation[inverse_permutation[i]] = i;
+//     }
+// }
 
-    for(int i = 0; i < 6; i++) {
-        permutation[inverse_permutation[i]] = i;
-    }
+// void SO6::lexicographic_order() {
+//     // Sort the indices based on the lexicographical order of the corresponding elements in arr
+//     for(uint8_t i = 0; i < 6; i++) lex_order[i] = i;
+//     std::sort(lex_order, lex_order+6, [this](int i, int j) {
+//         return lexicographical_less((*this)[i], (*this)[j]);
+//     });
+// }
+
+void SO6::lexicographic_order() {
+    // Sort the indices based on the lexicographical order of the corresponding elements in arr
+    for(uint8_t i = 0; i < 6; i++) lex_order[i] = i;
+    std::sort(lex_order, lex_order+6, [this](int i, int j) {
+        return lexicographical_less(i, j);
+    });
 }
 
 std::string SO6::name()
@@ -396,9 +556,9 @@ SO6 SO6::reconstruct_from_circuit_string(const std::string& input) {
 
 bool SO6::operator<(const SO6 &other) const
 {
-    for (int col = 0; col < 5; col++)
+    for (int col = 0; col < 5; ++col)
     { // There is no need to check the final column due to constraints
-        switch (lexicographical_compare((*this)[col], other[col])) {
+        switch (lexicographical_compare((*this)[lex_order[col]], other[other.lex_order[col]])) {
             case -1:
                 return true;
             case 1:
@@ -415,41 +575,11 @@ const z2_int SO6::getLDE() const
     {
         for (int j = 0; j < 6; j++)
         {
-            ret = std::max(ret, arr[i][j][2]);
+            ret = std::max(ret, (*this)[i][j].exponent);
         }
     }
     return ret;
 }
-
-// SO6 SO6::transpose() 
-// {
-//     SO6 ret;
-//     for(int col = 0; col<6; col++) {
-//         for(int row =0; row < 6; row++) {
-//             ret[col][row] std::vector<unsigned char> invert_circuit_string(const std::string& input) {
-//     std::vector<unsigned char> hist;
-//     std::istringstream iss(input);
-//     int lower, upper;
-
-//     while (iss >> lower) {
-//         lower += 1;  // Reverse the subtraction of 1 for the lower 4 bits
-//         unsigned char byte = static_cast<unsigned char>(lower & 15);
-
-//         // Check if there's an upper part
-//         if (iss >> upper) {
-//             upper += 1;  // Reverse the subtraction of 1 for the upper 4 bits
-//             byte |= static_cast<unsigned char>((upper & 15) << 4);
-//         }
-
-//         hist.push_back(byte);
-//     }
-
-//     return hist;
-//     }
-//     }
-//     ret.lexicographic_order();
-//     return ret;
-// }
 
 pattern SO6::to_pattern() const
 {
@@ -462,13 +592,13 @@ pattern SO6::to_pattern() const
     {
         for (int row = 0; row < 6; row++)
         {
-            if (arr[col][row][2] < lde - 1 || arr[col][row][0]==0) {
+            if (arr[row + (col<<2 + col<<1)].exponent < lde - 1 || arr[row + (col<<2 + col<<1)].intPart==0) {
                 continue;
             }
-            if (arr[col][row][2] == lde)
+            if (arr[row + (col<<2 + col<<1)].exponent == lde)
             {
                 ret.arr[col][row].first = 1;
-                ret.arr[col][row].second = arr[col][row][1] % 2;
+                ret.arr[col][row].second = arr[row + (col<<2 + col<<1)].sqrt2Part % 2;
                 continue;
             }
             ret.arr[col][row].second = 1;
@@ -546,7 +676,7 @@ void SO6::unpermuted_print() {
     for (int row = 0; row < 6; row++) {
         for (int col = 0; col < 6; col++) {
             std::stringstream ss;
-            ss << this->unpermuted(col, row);
+            ss << this[col][row];
             maxWidth = std::max(maxWidth, static_cast<int>(ss.str().length()));
         }
     }
@@ -560,7 +690,7 @@ void SO6::unpermuted_print() {
 
         std::cout << leftBorder << "\t";
         for (int col = 0; col < 6; col++) {
-            std::cout << std::setw(width) << this->unpermuted(col, row);
+            std::cout << std::setw(width) << this[col][row];
         }
         std::cout << "\t" << rightBorder << "\n";
     }

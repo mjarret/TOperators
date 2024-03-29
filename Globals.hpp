@@ -39,6 +39,11 @@ extern bool transpose_multiply;
 extern bool explicit_search_mode;
 extern bool cases_flag;
 
+// Counters
+extern int counter_zero;
+extern int counter_odd;
+extern int counter_even;
+
 class Globals {
     public:
         static void setParameters(int argc, char *argv[]);

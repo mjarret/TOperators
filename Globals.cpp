@@ -25,6 +25,11 @@ uint8_t stored_depth_max = 255;
 uint8_t num_gen_sets = 1;
 bool cases_flag = false;
 
+// // Counters
+int counter_zero = 0;
+int counter_odd = 0;
+int counter_even = 0;
+
 void Globals::setParameters(int argc, char *argv[]) {
     try {
         // Define options
