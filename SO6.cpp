@@ -90,83 +90,81 @@ int8_t SO6::lexicographical_compare(const Z2 first[6],const Z2 second[6])
  * @param second array of Z2 of length 6
  * @return -1 if first < second, 0 if equal, 1 if first > second
  */
-int8_t SO6::lexicographical_compare(const int &col1,const int & col2)
-{
-    bool first_is_negative = false;
-    bool second_is_negative = false;
-    int row;
-    // We search for the first nonzero row of first and if on the way we encounter a nonzero row of second, 
-    // we immediately claim second is larger. If both are nonzero, we compare them
-    // the goal is to "fix" the sign convention of the row so that the entire
-    // column is sorted such that the top element is positive by multiplying everything by -1
-    for (row = 0; row < 6; row++)
-    {
-        if (arr[get_index(row,col1)].intPart == 0) {
-            if(arr[get_index(row,col2)].intPart == 0) {
-                continue;
-            }
-            return 1;
-        }
-        if (arr[get_index(row,col2)].intPart == 0) {
-            return -1;
-        }
+// int8_t SO6::lexicographical_compare(const int &col1,const int & col2)
+// {
+//     bool first_is_negative = false;
+//     bool second_is_negative = false;
+//     int row;
+//     // We search for the first nonzero row of first and if on the way we encounter a nonzero row of second, 
+//     // we immediately claim second is larger. If both are nonzero, we compare them
+//     // the goal is to "fix" the sign convention of the row so that the entire
+//     // column is sorted such that the top element is positive by multiplying everything by -1
+//     counter_zero++;
+//     for (row = 0; row < 6; row++)
+//     {
+//         if (arr[get_index(row,col1)].intPart == 0) {
+//             if(arr[get_index(row,col2)].intPart == 0) {
+//                 continue;
+//             }
+//             return 1;
+//         }
+//         if (arr[get_index(row,col2)].intPart == 0) {
+//             return -1;
+//         }
+//         counter_even++;
+//         // Now both first and second are nonzero
+//         // first_is_negative = arr[get_index(col1,row)].is_negative();
+//         first_is_negative = (arr[get_index(row,col1)].intPart < 0) ;
+//         second_is_negative = (arr[get_index(row,col2)].intPart < 0);
+//         break;
+//     }
 
-        // Now both first and second are nonzero
-        // first_is_negative = arr[get_index(col1,row)].is_negative();
-        first_is_negative = (arr[get_index(row,col1)].intPart < 0) ;
-        second_is_negative = (arr[get_index(row,col2)].intPart < 0);
-        break;
-    }
+//     // compare remaining rows until return
+//     if(!first_is_negative) {
+//         if(!second_is_negative) {
+//         while (row < 6) {
+//                 if(arr[get_index(row,col1)] == arr[get_index(row,col2)]) {
+//                     row++;
+//                     continue;
+//                 }
+//                 if(arr[get_index(row,col2)] < arr[get_index(row,col1)]) return -1;
+//                 return 1;
+//             }
+//             return 0;
+//         }
+//         for (row; row < 6; row++)
+//             {
+//                 if(arr[get_index(row,col1)] == -arr[get_index(row,col2)]) continue;
+//                 if(-arr[get_index(row,col2)] < arr[get_index(row,col1)]) return -1;
+//                 return 1;
+//             }
+//         return 0;
+//     }
+//     //first is negative now
+//     if(!second_is_negative) {
+//         for (row; row < 6; row++) {
+//                 if(-arr[get_index(row,col1)] == arr[get_index(row,col2)]) continue;
+//                 if(arr[get_index(row,col2)] < -arr[get_index(row,col1)]) return -1;
+//                 return 1;
+//             }
+//         return 0;
+//     }
 
-    // compare remaining rows until return
-    if(!first_is_negative) {
-        if(!second_is_negative) {
-        while (row < 6) {
-                if(arr[get_index(row,col1)] == arr[get_index(row,col2)]) {
-                    row++;
-                    continue;
-                }
-                if(arr[get_index(row,col2)] < arr[get_index(row,col1)]) return -1;
-                return 1;
-            }
-            return 0;
-        }
-        for (row; row < 6; row++)
-            {
-                if(arr[get_index(row,col1)] == -arr[get_index(row,col2)]) continue;
-                if(-arr[get_index(row,col2)] < arr[get_index(row,col1)]) return -1;
-                return 1;
-            }
-        return 0;
-    }
-    //first is negative now
-    if(!second_is_negative) {
-        for (row; row < 6; row++) {
-                if(-arr[get_index(row,col1)] == arr[get_index(row,col2)]) continue;
-                if(arr[get_index(row,col2)] < -arr[get_index(row,col1)]) return -1;
-                return 1;
-            }
-        return 0;
-    }
-
-    //both are negative
-    for (int i = row; i < 6; i++)    {
-        if(arr[get_index(i,col1)] == arr[get_index(i,col2)]) continue;
-        if(-arr[get_index(i,col2)] < -arr[get_index(i,col1)]) return -1;
-        return 1;
-    }
-    return 0;
-}
+//     //both are negative
+//     for (int i = row; i < 6; i++)    {
+//         if(arr[get_index(i,col1)] == arr[get_index(i,col2)]) continue;
+//         if(-arr[get_index(i,col2)] < -arr[get_index(i,col1)]) return -1;
+//         return 1;
+//     }
+//     return 0;
+// }
 
 bool SO6::lexicographical_less(const int &col1,const int & col2)
 {
     bool first_is_negative = false;
     bool second_is_negative = false;
     int row;
-    // We search for the first nonzero row of first and if on the way we encounter a nonzero row of second, 
-    // we immediately claim second is larger. If both are nonzero, we compare them
-    // the goal is to "fix" the sign convention of the row so that the entire
-    // column is sorted such that the top element is positive by multiplying everything by -1
+
     for (row = 0; row < 6; row++)
     {
         if (arr[get_index(row,col1)].intPart == 0) {
@@ -178,16 +176,14 @@ bool SO6::lexicographical_less(const int &col1,const int & col2)
         if (arr[get_index(row,col2)].intPart == 0) {
             return true;
         }
-
         // Now both first and second are nonzero
         // first_is_negative = arr[get_index(col1,row)].is_negative();
         first_is_negative = (arr[get_index(row,col1)].intPart < 0) ;
         second_is_negative = (arr[get_index(row,col2)].intPart < 0);
         break;
     }
-    
+
     // compare remaining rows until return
-    
     if(!first_is_negative) {
         if(!second_is_negative) {
             for (row; row < 6; ++row) {
@@ -202,6 +198,7 @@ bool SO6::lexicographical_less(const int &col1,const int & col2)
             }
         return false;
     }
+
     //first is negative now
     if(!second_is_negative) {
         for (row; row < 6; ++row) {
@@ -210,6 +207,7 @@ bool SO6::lexicographical_less(const int &col1,const int & col2)
             }
         return false;
     }
+
     //both are negative
     for (row; row < 6; ++row)    {
         if(-arr[get_index(row,col1)] < -arr[get_index(row,col2)]) return false;
