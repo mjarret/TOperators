@@ -238,16 +238,11 @@ bool Z2::operator!=(const Z2 &other) const { return !(*this == other); }
  */
 bool Z2::operator<(const Z2 &other) const
 {
-    if(intPart<other.intPart) 
-        return true;
+    if(intPart<other.intPart)   return true;
     if(intPart==other.intPart) 
     {
-        if(sqrt2Part<other.sqrt2Part) 
-            return true;
-        if(sqrt2Part==other.sqrt2Part) {
-            if(exponent<other.exponent) 
-                return true;
-        }
+        if(sqrt2Part<other.sqrt2Part) return true;
+        if(sqrt2Part==other.sqrt2Part && exponent<other.exponent) return true;
     }
     return false;
 }

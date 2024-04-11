@@ -358,12 +358,28 @@ void storeCosets(int curr_T_count,
     }
 }
 
-/**
- * @brief This is the main loop
- * @param argc number of command line arguments
- * @param argv vector of command line arguments
- * @return 0
- */
+set<SO6> SO6s_starting_at(SO6 &tree_root, const int &depth) {
+
+    set<SO6> prior, current = std::set<SO6>({tree_root});
+
+    for (int curr_T_count = 0; curr_T_count < depth; ++curr_T_count)
+    {
+        set<SO6> next;
+        for (int T = 0; T < 15; T++)
+        {                
+            for(const SO6& S : current)
+            {
+                SO6 toInsert = S.left_multiply_by_T(T);
+                next.insert(toInsert);                              
+            }
+        }
+        utils::setDifference(next,prior);
+        utils::rotate_and_clear(prior, current, next); // current is now ready for next iteration
+    }
+
+    return current;
+}
+
 /**
  * @brief The main function of the program.
  *
@@ -376,8 +392,6 @@ void storeCosets(int curr_T_count,
  */
 int main(int argc, char **argv)
 {
-
-
     auto program_init_time = now();          // Begin timekeeping
     Globals::setParameters(argc, argv);      // Initialize parameters to command line argument
     Globals::configure();                    // Configure the globals to remove inconsistencies

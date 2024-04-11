@@ -14,7 +14,6 @@ public:
     // inline uint32_t as_uint32() const;
     Z2 operator+(const Z2&) const; //handles addition
     Z2& operator+=(const Z2&); //handles +=
-void NewFunction();
     Z2& operator-=(const Z2&); //handles -=
     Z2 operator-() const; //handles negation
     Z2 operator-(Z2&); //handles subtraction
