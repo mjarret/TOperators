@@ -60,17 +60,31 @@ public:
     
 
 
+    // /**
+    //  * @brief Performs the set difference operation (A \ B).
+    //  * Erases elements from set A that are also in set B.
+    //  * @param A Set from which elements will be erased.
+    //  * @param B Set containing elements to be removed from A.
+    //  */
+    // static void setDifference(std::set<SO6>& A, const std::set<SO6>& B) {
+    //     for (auto it = B.begin(); it != B.end(); ++it) {
+    //         A.erase(*it);
+    //     }
+    // }
+
     /**
      * @brief Performs the set difference operation (A \ B).
      * Erases elements from set A that are also in set B.
      * @param A Set from which elements will be erased.
      * @param B Set containing elements to be removed from A.
      */
-    static void setDifference(std::set<SO6>& A, const std::set<SO6>& B) {
+    template<typename T>
+    static void setDifference(std::set<T>& A, const std::set<T>& B) {
         for (auto it = B.begin(); it != B.end(); ++it) {
             A.erase(*it);
         }
     }
+
 
     /**
      * @brief Rotates and clears sets for the next iteration.
@@ -93,7 +107,149 @@ public:
     static int num_generating_sets(int total_T_count, int max_stored_depth) {
         return std::min(total_T_count - 1 - max_stored_depth, max_stored_depth); 
     }
+
+    template <typename ForwardIt, typename Compare = std::less<>>
+    static std::vector<typename std::iterator_traits<ForwardIt>::value_type>
+    find_all_maxima(ForwardIt first, ForwardIt last, Compare comp = Compare()) {
+        using T = typename std::iterator_traits<ForwardIt>::value_type;
+        
+        if (first == last) return {};  // Return empty if range is empty
+
+        std::vector<T> maxima;
+        auto maxElem = *first;
+        
+        for (auto it = first; it != last; ++it) {
+            if (comp(maxElem, *it)) {
+                maxElem = *it;
+                maxima.clear();
+                maxima.push_back(*it);
+            } else if (!comp(*it, maxElem)) {
+                maxima.push_back(*it);
+            }
+        }
+        
+        return maxima;
+    }
+
+template <bool first_is_negative, bool second_is_negative>
+static bool lex_comparator(const Z2 &first, const Z2 &second) {
+    if constexpr (first_is_negative) {
+        if constexpr (second_is_negative) {
+            return (-second < -first);
+        } else {
+            return (second < -first);
+        }
+    } else {
+        if constexpr (second_is_negative) {
+            return (-second < first);
+        } else {
+            return (second < first);
+        }
+    }
+}
+
+using LexComparatorType = bool (*)(const Z2&, const Z2&);
+static std::pair<LexComparatorType, LexComparatorType> get_comparators(const bool &first_is_negative, const bool &second_is_negative) {
+    auto comparator_fs = lex_comparator<false, false>;
+    auto comparator_sf = lex_comparator<false, false>;
+
+    if (first_is_negative && second_is_negative) {
+        comparator_fs = lex_comparator<true, true>;
+        comparator_sf = lex_comparator<true, true>;
+    } else if (first_is_negative && !second_is_negative) {
+        comparator_fs = lex_comparator<true, false>;
+        comparator_sf = lex_comparator<false, true>;
+    } else if (second_is_negative && !first_is_negative) {
+        comparator_fs = lex_comparator<false, true>;
+        comparator_sf = lex_comparator<true, false>;
+    }
+
+    return std::make_pair(comparator_fs, comparator_sf);
+}
+
+
+        /**
+         * @brief Compares two ranges lexicographically, considering their sign.
+         *
+         * This function compares two ranges, `first` and `second`, taking into account their respective signs.
+         * The comparison is done lexicographically:
+         * - If both ranges have the same sign, the comparison is straightforward.
+         * - If the signs differ, the function determines the order based on the sign and value.
+         *
+         * @tparam Iterator Type of the iterator.
+         * @param first_begin Iterator to the beginning of the first range.
+         * @param first_end Iterator to the end of the first range.
+         * @param second_begin Iterator to the beginning of the second range.
+         * @param second_end Iterator to the end of the second range.
+         * @return std::strong_ordering::less if the first range is less than the second range,
+         *         std::strong_ordering::equal if the ranges are equal,
+         *         std::strong_ordering::greater if the first range is greater than the second range.
+         */
+        template <typename Iterator>
+        static std::strong_ordering lex_order(Iterator first_begin, Iterator first_end, Iterator second_begin, Iterator second_end) {
+            bool first_is_negative = false;
+            bool second_is_negative = false;
+
+            // Find the first non-zero element in both ranges and determine sign
+            Iterator first_it = first_begin;
+            Iterator second_it = second_begin;
+            for (; first_it != first_end && second_it != second_end; ++first_it, ++second_it) {
+                if ((*first_it).intPart == 0) {
+                    if ((*second_it).intPart == 0) {
+                        continue;  // Both are zero, continue to the next element
+                    }
+                    return std::strong_ordering::greater;  // First is zero, second is non-zero => first > second
+                }
+                if ((*second_it).intPart == 0) {
+                    return std::strong_ordering::less;  // First is non-zero, second is zero => first < second
+                }
+
+                // Both first and second are non-zero, now determine their signs
+                first_is_negative = ((*first_it).intPart < 0);
+                second_is_negative = ((*second_it).intPart < 0);
+                break;
+            }
+
+            // Get comparators based on the sign of the first non-zero element
+            auto comparator = get_comparators(first_is_negative, second_is_negative);
+
+            // Compare the remaining elements
+            for (; first_it != first_end && second_it != second_end; ++first_it, ++second_it) {
+                if (comparator.first(*first_it, *second_it)) {
+                    return std::strong_ordering::less;  // first < second
+                }
+                if (comparator.second(*second_it, *first_it)) {
+                    return std::strong_ordering::greater;  // first > second
+                }
+            }
+
+            // // If one range is a prefix of the other
+            // if (first_it != first_end) {
+            //     return std::strong_ordering::greater;  // first range is longer
+            // }
+            // if (second_it != second_end) {
+            //     return std::strong_ordering::less;  // second range is longer
+            // }
+
+            return std::strong_ordering::equal;  // All elements are equal
+        }
+
+        template <typename Iterator>
+        static bool lex_less(Iterator first_begin, Iterator first_end, Iterator second_begin, Iterator second_end) {
+        return (lex_order(first_begin, first_end, second_begin, second_end) == std::strong_ordering::less);
+        }
+
+        static std::strong_ordering lex_order(const SO6 &left, const SO6 &right, const int &col)
+        {
+            auto left_begin = left.begin() + (col << 1) + (col << 2);
+            auto right_begin = right.begin() + (col << 1) + (col << 2);
+
+            return lex_order(left_begin, left_begin + 6, right_begin, right_begin + 6);
+        }
+
 };
+
+
 #endif // UTILS_HPP
 
 
